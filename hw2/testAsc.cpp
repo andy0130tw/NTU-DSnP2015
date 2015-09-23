@@ -17,7 +17,7 @@ using namespace std;
 //----------------------------------------------------------------------
 void mybeep();
 char mygetc(istream&);
-ParseChar checkChar(char, istream&);
+ParseChar getChar(char, istream&);
 
 //----------------------------------------------------------------------
 //    Global static funcitons
@@ -28,7 +28,7 @@ int main()
    cout << "Press \"Ctrl-d\" to quit" << endl;
    while (1) {
       ch = mygetc(cin);
-      ParseChar pch = checkChar(ch, cin);
+      ParseChar pch = getChar(ch, cin);
       if (pch == INPUT_END_KEY) {
          cout << "Input end" << endl;
          break;

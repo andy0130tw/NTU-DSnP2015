@@ -16,7 +16,7 @@ using namespace std;
 //----------------------------------------------------------------------
 void mybeep();
 char mygetc(istream&);
-ParseChar checkChar(char, istream&);
+ParseChar getChar(char, istream&);
 
 
 //----------------------------------------------------------------------
@@ -40,7 +40,7 @@ CmdParser::readCmdInt(istream& istr)
 
    while (1) {
       char ch = mygetc(istr);
-      ParseChar pch = checkChar(ch, istr);
+      ParseChar pch = getChar(ch, istr);
       if (pch == INPUT_END_KEY) break;
       switch (pch) {
          case LINE_BEGIN_KEY :
