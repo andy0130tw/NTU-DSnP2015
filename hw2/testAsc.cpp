@@ -3,7 +3,7 @@
   PackageName  [ N/A ]
   Synopsis     [ To test your keyboard mapping ]
   Author       [ Chung-Yang (Ric) Huang ]
-  Copyright    [ Copyleft(c) 2007-2014 LaDs(III), GIEE, NTU, Taiwan ]
+  Copyright    [ Copyleft(c) 2007-2015 LaDs(III), GIEE, NTU, Taiwan ]
 ****************************************************************************/
 #include <iostream>
 #include <iomanip>
@@ -17,7 +17,7 @@ using namespace std;
 //----------------------------------------------------------------------
 void mybeep();
 char mygetc(istream&);
-ParseChar getChar(char, istream&);
+ParseChar getChar(istream&);
 
 //----------------------------------------------------------------------
 //    Global static funcitons
@@ -27,8 +27,7 @@ int main()
    char ch;
    cout << "Press \"Ctrl-d\" to quit" << endl;
    while (1) {
-      ch = mygetc(cin);
-      ParseChar pch = getChar(ch, cin);
+      ParseChar pch = getChar(cin);
       if (pch == INPUT_END_KEY) {
          cout << "Input end" << endl;
          break;
@@ -50,7 +49,8 @@ int main()
          case PG_UP_KEY:      cout << "Page up" << endl; break;
          case PG_DOWN_KEY:    cout << "Page down" << endl; break;
          case UNDEFINED_KEY:  cout << "<Undefined>!!" << endl; mybeep(); break;
-         default:             cout << ch << endl; break; // printable character
+         default:             cout << char(pch) << endl; break;
+                              // printable character
       }
    }
 }

@@ -3,7 +3,7 @@
   PackageName  [ cmd ]
   Synopsis     [ Process keyboard inputs ]
   Author       [ Chung-Yang (Ric) Huang ]
-  Copyright    [ Copyleft(c) 2007-2014 LaDs(III), GIEE, NTU, Taiwan ]
+  Copyright    [ Copyleft(c) 2007-2015 LaDs(III), GIEE, NTU, Taiwan ]
 ****************************************************************************/
 #include <iostream>
 #include <iomanip>
@@ -71,8 +71,10 @@ inline ParseChar returnCh(int);
 // Make sure you DO NOT define TA_KB_SETTING in your Makefile
 //
 ParseChar
-getChar(char ch, istream& istr)
+getChar(istream& istr)
 {
+   char ch = mygetc(istr);
+
    if (istr.eof())
       return returnCh(INPUT_END_KEY);
    switch (ch) {
@@ -120,7 +122,7 @@ getChar(char ch, istream& istr)
                return returnCh(int(key) + ARROW_KEY_FLAG);
             else return returnCh(UNDEFINED_KEY);
          }
-         else { mybeep(); return getChar(combo, istr); }
+         else { mybeep(); return getChar(istr); }
       }
 
       // For the remaining printable and undefined keys
@@ -140,8 +142,10 @@ getChar(char ch, istream& istr)
 // TA will use "make -DTA_KB_SETTING" to test your program
 //
 ParseChar
-getChar(char ch, istream& istr)
+getChar(istream& istr)
 {
+   char ch = mygetc(istr);
+
    if (istr.eof())
       return returnCh(INPUT_END_KEY);
    switch (ch) {
@@ -178,7 +182,7 @@ getChar(char ch, istream& istr)
                return returnCh(int(key) + ARROW_KEY_FLAG);
             else return returnCh(UNDEFINED_KEY);
          }
-         else { mybeep(); return getChar(combo, istr); }
+         else { mybeep(); return getChar(istr); }
       }
       // For the remaining printable and undefined keys
       default:

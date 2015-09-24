@@ -3,7 +3,7 @@
   PackageName  [ cmd ]
   Synopsis     [ Define command line reader member functions ]
   Author       [ Chung-Yang (Ric) Huang ]
-  Copyright    [ Copyleft(c) 2007-2014 LaDs(III), GIEE, NTU, Taiwan ]
+  Copyright    [ Copyleft(c) 2007-2015 LaDs(III), GIEE, NTU, Taiwan ]
 ****************************************************************************/
 #include <cassert>
 #include <cstring>
@@ -16,7 +16,7 @@ using namespace std;
 //----------------------------------------------------------------------
 void mybeep();
 char mygetc(istream&);
-ParseChar getChar(char, istream&);
+ParseChar getChar(istream&);
 
 
 //----------------------------------------------------------------------
@@ -39,8 +39,7 @@ CmdParser::readCmdInt(istream& istr)
    resetBufAndPrintPrompt();
 
    while (1) {
-      char ch = mygetc(istr);
-      ParseChar pch = getChar(ch, istr);
+      ParseChar pch = getChar(istr);
       if (pch == INPUT_END_KEY) break;
       switch (pch) {
          case LINE_BEGIN_KEY :
