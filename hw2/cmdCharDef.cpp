@@ -99,6 +99,30 @@ getChar(char ch, istream& istr)
       // -- Usually starts with ESC key, so we check the "case ESC"
       // case ESC_KEY:
 
+      // ****** Copied from TA settings ****** //
+      case BACK_SPACE_KEY:
+         return returnCh(ch);
+
+      // Combo keys: multiple codes for one key press
+      // -- Usually starts with ESC key, so we check the "case ESC"
+      case ESC_KEY: {
+         char combo = mygetc(istr);
+         // Note: ARROW_KEY_INT == MOD_KEY_INT, so we only check MOD_KEY_INT
+         if (combo == char(MOD_KEY_INT)) {
+            char key = mygetc(istr);
+            if ((key >= char(MOD_KEY_BEGIN)) && (key <= char(MOD_KEY_END))) {
+               if (mygetc(istr) == MOD_KEY_DUMMY)
+                  return returnCh(int(key) + MOD_KEY_FLAG);
+               else return returnCh(UNDEFINED_KEY);
+            }
+            else if ((key >= char(ARROW_KEY_BEGIN)) &&
+                     (key <= char(ARROW_KEY_END)))
+               return returnCh(int(key) + ARROW_KEY_FLAG);
+            else return returnCh(UNDEFINED_KEY);
+         }
+         else { mybeep(); return getChar(combo, istr); }
+      }
+
       // For the remaining printable and undefined keys
       default:
          if (isprint(ch)) return returnCh(ch);
