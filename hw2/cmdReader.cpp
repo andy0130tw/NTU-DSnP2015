@@ -210,7 +210,23 @@ CmdParser::insertChar(char ch, int repeat)
 void
 CmdParser::deleteLine()
 {
-   // TODO...
+   // UNTESTED -- might be buggy!
+
+   // move to head
+   this->moveBufPtr(_readBuf);
+   // while(this->deleteChar());
+
+   /* 1. */
+   for (char* c = _readBuf; c < _readBufEnd; c++) {
+      cout << ' ';
+      _readBufPtr++;
+   }
+   // move to head again
+   this->moveBufPtr(_readBuf);
+   /* 2. */
+   _readBufEnd = _readBuf;
+   /* 3., not obvious but critial(?) */
+   *_readBufEnd = 0;
 }
 
 
@@ -235,7 +251,34 @@ CmdParser::deleteLine()
 void
 CmdParser::moveToHistory(int index)
 {
-   // TODO...
+   assert(index != _historyIdx);
+
+   int _size = (int)_history.size();
+   if (index < _historyIdx) {
+      // upward
+      if (_historyIdx == 0) { mybeep(); return; }
+      if (index < 0)        { index = 0; }
+      // cout << "going up with _size = " << _size << " and _historyIdx = " << _historyIdx << endl;
+      if (_historyIdx == _size) {
+         // save tmp history
+         string tmp = string(_readBuf);
+         _history.push_back(tmp);
+         _tempCmdStored = true;
+      }
+      _historyIdx = index;
+      this->retrieveHistory();
+   } else {
+      // downward
+      if (_historyIdx >= _size) { mybeep(); return; }
+      if (index >= _size)       { index = _size - 1; }
+      _historyIdx = index;
+      this->retrieveHistory();
+      if (_tempCmdStored && index == _size - 1) {
+         // pop out history
+         _history.pop_back();
+         _tempCmdStored = false;
+      }
+   }
 }
 
 
@@ -254,7 +297,27 @@ CmdParser::moveToHistory(int index)
 void
 CmdParser::addHistory()
 {
-   // TODO...
+   string str_raw = string(_readBuf);
+   string str;
+
+   int begin = 0, end = str_raw.size() - 1;
+   while (str_raw[begin] == ' ') begin++;
+   while (str_raw[end]   == ' ') end--;
+   str = str_raw.substr(begin, end - begin + 1);
+
+   // cout << "\nSaved [" << str <<"] to history. \n";
+
+   if (_tempCmdStored) {
+      // replace it
+      _history.pop_back();
+      _history.push_back(str);
+      _tempCmdStored = false;
+   } else if (str.size() > 0) {
+      // create a new entry
+      _history.push_back(str);
+   }
+
+   _historyIdx = (int)_history.size();
 }
 
 
