@@ -58,7 +58,7 @@ CmdParser::readCmdInt(istream& istr)
          case ARROW_LEFT_KEY : moveBufPtr(_readBufPtr - 1); break;
          case PG_UP_KEY      : moveToHistory(_historyIdx - PG_OFFSET); break;
          case PG_DOWN_KEY    : moveToHistory(_historyIdx + PG_OFFSET); break;
-         case TAB_KEY        : insertChar(' ', 8 - (_readBufEnd - _readBuf) % 8); break;
+         case TAB_KEY        : insertChar(' ', TAB_POSITION - (_readBufPtr - _readBuf) % TAB_POSITION); break;
          case INSERT_KEY     : // not yet supported; fall through to UNDEFINE
          case UNDEFINED_KEY:   mybeep(); break;
          default:  // printable character
