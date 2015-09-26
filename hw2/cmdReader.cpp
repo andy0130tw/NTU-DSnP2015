@@ -46,7 +46,7 @@ CmdParser::readCmdInt(istream& istr)
          case HOME_KEY       : moveBufPtr(_readBuf); break;
          case LINE_END_KEY   :
          case END_KEY        : moveBufPtr(_readBufEnd); break;
-         case BACK_SPACE_KEY : moveBufPtr(_readBufPtr - 1); /* attention: no break to fall through */
+         case BACK_SPACE_KEY : if (moveBufPtr(_readBufPtr - 1)) deleteChar(); break;
          case DELETE_KEY     : deleteChar(); break;
          case NEWLINE_KEY    : addHistory();
                                cout << char(NEWLINE_KEY);
@@ -148,6 +148,7 @@ CmdParser::deleteChar()
    _readBufEnd--;
    /* 4., 7. */
    this->moveBufPtr(bufPtrOri);
+   // cout << "\nbuffer is now [" << _readBuf << "].\n";
    return true;
 }
 
@@ -210,8 +211,6 @@ CmdParser::insertChar(char ch, int repeat)
 void
 CmdParser::deleteLine()
 {
-   // UNTESTED -- might be buggy!
-
    // move to head
    this->moveBufPtr(_readBuf);
    // while(this->deleteChar());
@@ -225,7 +224,7 @@ CmdParser::deleteLine()
    this->moveBufPtr(_readBuf);
    /* 2. */
    _readBufEnd = _readBuf;
-   /* 3., not obvious but critial(?) */
+   /* 3., not obvious(?) */
    *_readBufEnd = 0;
 }
 
@@ -260,9 +259,10 @@ CmdParser::moveToHistory(int index)
       if (index < 0)        { index = 0; }
       // cout << "going up with _size = " << _size << " and _historyIdx = " << _historyIdx << endl;
       if (_historyIdx == _size) {
-         // save tmp history
-         string tmp = string(_readBuf);
-         _history.push_back(tmp);
+         // TODO: if escaping current line
+         // save tmp history; terminate the buffer first
+         *_readBufEnd = 0;
+         _history.push_back(_readBuf);
          _tempCmdStored = true;
       }
       _historyIdx = index;
@@ -297,7 +297,7 @@ CmdParser::moveToHistory(int index)
 void
 CmdParser::addHistory()
 {
-   string str_raw = string(_readBuf);
+   string str_raw = string(_readBuf, _readBufEnd - _readBuf);
    string str;
 
    int begin = 0, end = str_raw.size() - 1;
@@ -305,14 +305,14 @@ CmdParser::addHistory()
    while (str_raw[end]   == ' ') end--;
    str = str_raw.substr(begin, end - begin + 1);
 
-   // cout << "\nSaved [" << str <<"] to history. \n";
-
    if (_tempCmdStored) {
       // replace it
       _history.pop_back();
-      _history.push_back(str);
+      // _history.push_back(str);
+      // _history[(int)_history.size() - 1].assign(str);
       _tempCmdStored = false;
-   } else if (str.size() > 0) {
+   }
+   if (str.size() > 0) {
       // create a new entry
       _history.push_back(str);
    }
