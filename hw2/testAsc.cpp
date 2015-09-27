@@ -24,7 +24,7 @@ ParseChar getChar(istream&);
 //----------------------------------------------------------------------
 int main()
 {
-   char ch;
+   // char ch;
    cout << "Press \"Ctrl-d\" to quit" << endl;
    while (1) {
       ParseChar pch = getChar(cin);
