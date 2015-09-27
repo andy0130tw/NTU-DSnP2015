@@ -212,7 +212,6 @@ CmdParser::deleteLine()
 {
    // move to head
    this->moveBufPtr(_readBuf);
-   // while(this->deleteChar());
 
    /* 1. */
    for (char* c = _readBuf; c < _readBufEnd; c++) {
@@ -256,9 +255,7 @@ CmdParser::moveToHistory(int index)
       // upward
       if (_historyIdx == 0) { mybeep(); return; }
       if (index < 0)        { index = 0; }
-      // cout << "going up with _size = " << _size << " and _historyIdx = " << _historyIdx << endl;
       if (_historyIdx == _size) {
-         // TODO: if escaping current line
          // save tmp history; terminate the buffer first
          *_readBufEnd = 0;
          _history.push_back(_readBuf);
