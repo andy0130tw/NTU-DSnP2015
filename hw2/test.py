@@ -35,7 +35,7 @@ class CursorOverflowException(Exception):
         self.currentIndex = idxCurr
         self.destIndex = idxDest
 
-class AssertionException(AssertionError):
+class TestFailException(AssertionError):
     def __init__(self, message, expected, found):
         super().__init__('Assert failed - {}: expected [{}], found [{}].'
             .format(message, expected, found))
@@ -44,8 +44,9 @@ class AssertionException(AssertionError):
         self.found = found
 
 class CmdReaderTester():
-    def __init__(self, argv=None, buffer_size=1000):
-        ''' init a tester with specified buffer_size. '''
+    def __init__(self, argv=None, buffer_size=1000, debug=False):
+        ''' init a tester with specified buffer_size.
+            don't preserve history and _seq if debug is set to True. '''
         self._buffer = [None] * buffer_size
         # indicating the end of the buffer
         self._buffer[0] = KEY_NULL
@@ -57,6 +58,7 @@ class CmdReaderTester():
         self.history = []
 
         # private members
+        self._debug = debug
         self._proc = None
         self._seq = b''
         self._seq_bol_pos = 0
@@ -108,7 +110,8 @@ class CmdReaderTester():
         if out is not None:
             for b in out:
                 char = bytes((b,))
-                self._seq += char
+                if self._debug:
+                    self._seq += char
                 self._inputChar(char)
 
     def check(self, buf=None, cur_pos=None, bell_count=None, reset_counter=True, strict=True):
@@ -137,7 +140,7 @@ class CmdReaderTester():
         return self.check(buf, cur_pos, bell_count, strict=strict)
 
     def is_ended(self):
-        ''' check if the program was exited normally. '''
+        ''' check if the program has exited normally. '''
         rcode = self._proc.poll()
         return rcode is not None
 
@@ -162,8 +165,9 @@ class CmdReaderTester():
             self.cursor_position -= 1
         elif char == b'\n':
             # push current line to history and start a new line
-            self.history.append(self.buffer())
-            self._seq_bol_pos = self.length + 1
+            if self._debug:
+                self.history.append(self.buffer())
+                self._seq_bol_pos = self.length + 1
             self._buffer[0] = KEY_NULL
             self.cursor_position = 0
         else:
@@ -182,13 +186,13 @@ class CmdReaderTester():
     def _check_equal(answer, value, assert_errmsg):
         ''' internal checking for equality. '''
         if answer != value:
-            raise AssertionException(assert_errmsg, answer, value)
+            raise TestFailException(assert_errmsg, answer, value)
 
     @staticmethod
     def _check_rstrip(answer, value, assert_errmsg):
         ''' internal checking ingoring spaces at the right. '''
         if answer.rstrip() != value.rstrip():
-            raise AssertionException(assert_errmsg, answer.rstrip(), value.rstrip())
+            raise TestFailException(assert_errmsg, answer.rstrip(), value.rstrip())
 
 class PrintHelper():
     key_disp = {}
@@ -254,7 +258,7 @@ def make(target=None):
 def test_key_mapping():
     make('test')
     print('*** Please ensure that the following key identifiers are correct. ***')
-    p = CmdReaderTester(['./testAsc'])
+    p = CmdReaderTester(['./testAsc'], debug=True)
     p.input(''.join([
         'aA1~#$',        # LITERAL
         KEY_LINE_BEGIN,  KEY_LINE_END,
@@ -269,105 +273,8 @@ def test_key_mapping():
     print('\n'.join(p.history))
     p.end()
 
-def test_official_suite(fname='./cmdReader'):
+def test_suite(testSuite, fname='./cmdReader'):
     p = CmdReaderTester([fname])
-
-    _SEQ_LONG_HISTORY = ''.join(
-        [ str(i) + KEY_NEWLINE
-            for i
-            in (2, 3, 4, 5, 6, 7, 8, 9, 0, 11, 12, 13, 14) ]
-    )
-
-    testSuite = [
-        ('Hello World'       , 'Hello World'                      , 11) ,
-        ('  '                , 'Hello World  '                    , 13) ,
-        (KEY_LINE_BEGIN      , 'Hello World  '                    , 0)  ,
-        (' '                 , ' Hello World  '                   , 1)  ,
-        ('YaYa'              , ' YaYaHello World  '               , 5)  ,
-        (' '                 , ' YaYa Hello World  '              , 6)  ,
-        (KEY_DELETE * 2      , ' YaYa llo World  '                , 6)  ,
-        (KEY_BACKSPACE * 3   , ' Yallo World  '                   , 3)  ,
-        (KEY_NEWLINE * 2     , ''                                 , 0)  ,
-        (KEY_ARROW_UP        , 'Yallo World'                      , 11) ,
-        (KEY_ARROW_LEFT * 6  , 'Yallo World'                      , 5)  ,
-        ('w'                 , 'Yallow World'                     , 6)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_ARROW_UP * 3    , 'Yallo World'                      , 11  , 1) ,
-        ('!!'                , 'Yallo World!!'                    , 13) ,
-        (KEY_ARROW_DOWN * 4  , ''                                 , 0   , 2) ,
-        ('You may say'       , 'You may say'                      , 11) ,
-        (KEY_HOME            , 'You may say'                      , 0)  ,
-        ('  '                , '  You may say'                    , 2)  ,
-        (KEY_ARROW_UP * 2    , 'Yallo World'                      , 11) ,
-        (KEY_BACKSPACE * 9   , 'Ya'                               , 2)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        # TODO: atomic operation to check history
-        ('I am a dreamer'    , 'I am a dreamer'                   , 14) ,
-        ('  '                , 'I am a dreamer  '                 , 16) ,
-        (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
-        ('Da'                , 'YaDa'                             , 4)  ,
-        (KEY_ARROW_DOWN      , 'I am a dreamer  '                 , 16) ,
-        (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
-        (KEY_BACKSPACE * 3   , ''                                 , 0   , 1) ,
-        (KEY_DELETE          , ''                                 , 0   , 1) ,
-        ('   '               , '   '                              , 3)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
-        (KEY_ARROW_UP        , 'Yallow World'                     , 12) ,
-        (KEY_ARROW_DOWN * 3  , ''                                 , 0   , 1) ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        ('But not'           , 'But not'                          , 7)  ,
-        ('  '                , 'But not  '                        , 9)  ,
-        (KEY_HOME            , 'But not  '                        , 0)  ,
-        (KEY_END             , 'But not  '                        , 9)  ,
-        (KEY_ARROW_LEFT * 5  , 'But not  '                        , 4)  ,
-        ('I\'m'              , 'But I\'mnot  '                    , 7)  ,
-        (' '                 , 'But I\'m not  '                   , 8)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_ARROW_UP        , 'But I\'m not'                     , 11) ,
-        (' '                 , 'But I\'m not '                    , 12) ,
-        ('the only one.'     , 'But I\'m not the only one.'       , 25) ,
-        (KEY_ARROW_UP * 2    , 'Yallow World'                     , 12) ,
-        (KEY_DELETE * 2      , 'Yallow World'                     , 12  , 2) ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_ARROW_UP        , 'Yallow World'                     , 12) ,
-        (KEY_ARROW_UP        , 'But I\'m not'                     , 11) ,
-        (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
-        ('...'               , 'Ya...'                            , 5)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        # TODO: atomic operation to check history
-        ('I hope someday'    , 'I hope someday'                   , 14) ,
-        (KEY_ARROW_LEFT * 8  , 'I hope someday'                   , 6)  ,
-        (KEY_TAB             , 'I hope   someday'                 , 8)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_TAB             , ' ' * 8                            , 8)  ,
-        ('you\'ll join us.'  , '        you\'ll join us.'         , 23) ,
-        (KEY_HOME            , '        you\'ll join us.'         , 0)  ,
-        ('1'                 , '1        you\'ll join us.'        , 1)  ,
-        (KEY_LINE_END        , '1        you\'ll join us.'        , 24) ,
-        (KEY_TAB             , '1        you\'ll join us.       ' , 32) ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (_SEQ_LONG_HISTORY   , ''                                 , 0)  ,
-        ('And the world'     , 'And the world'                    , 13) ,
-        (KEY_PAGEUP          , '5'                                , 1)  ,
-        (KEY_PAGEUP          , 'Yallow World'                     , 12) ,
-        (KEY_PAGEUP          , 'Yallo World'                      , 11) ,
-        (KEY_PAGEUP          , 'Yallo World'                      , 11  , 1) ,
-        (KEY_PAGEDOWN        , '4'                                , 1)  ,
-        (KEY_PAGEDOWN        , '14'                               , 2)  ,
-        (KEY_PAGEDOWN        , 'And the world'                    , 13) ,
-        (KEY_PAGEDOWN        , 'And the world'                    , 13  , 1) ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        ('will live as one!' , 'will live as one!'                , 17) ,
-        (KEY_PAGEUP          , '6'                                , 1)  ,
-        (' '                 , '6 '                               , 2)  ,
-        ('imagine'           , '6 imagine'                        , 9)  ,
-        (KEY_NEWLINE         , ''                                 , 0)  ,
-        (KEY_PAGEDOWN        , ''                                 , 0   , 1) ,
-        (KEY_ARROW_UP * 12   , '5'                                , 1)  ,
-        (KEY_PAGEDOWN * 2    , ''                                 , 0)  ,
-        # end of the test
-    ]
     cnt = 0
     cnt_success = 0
     for test in testSuite:
@@ -390,7 +297,7 @@ def test_official_suite(fname='./cmdReader'):
                 PrintHelper.disp(test[0]),
                 PrintHelper.highlight(p.buffer(), p.cursor_position)
             ))
-        except AssertionException as e:
+        except TestFailException as e:
             print('{:4}: \033[91mFAILURE\033[0m - {:32} - [{}]'.format(
                 cnt,
                 PrintHelper.disp(test[0]),
@@ -424,7 +331,7 @@ def cross_testing():
             # manually clear bell count as we tested
             p1.bell_count = 0
             return True
-        except AssertionException as e:
+        except TestFailException as e:
             p1.bell_count = 0
             return e
 
@@ -454,14 +361,14 @@ def cross_testing():
             p2.input(c)
             result = _do_check()
             if result == True:
-                print(('{:4}: \033[92mSUCCESS\033[0m - {:12}  p1: [{}]\n' + ' ' * 30 + 'p2: [{}]').format(
+                print(('{:7}: \033[92mSUCCESS\033[0m - {:12}  p1: [{}]\n' + ' ' * 33 + 'p2: [{}]').format(
                     cnt + 1,
                     PrintHelper.disp(c),
                     PrintHelper.highlight(p1.buffer(), p1.cursor_position),
                     PrintHelper.highlight(p2.buffer(), p2.cursor_position)
                 ))
             else:
-                print(('{:4}: \033[91mFAILURE\033[0m - {:12}  p1: [{}]\n' + ' ' * 30 + 'p2: [{}]').format(
+                print(('{:7}: \033[91mFAILURE\033[0m - {:12}  p1: [{}]\n' + ' ' * 33 + 'p2: [{}]').format(
                     cnt + 1,
                     PrintHelper.disp(c),
                     PrintHelper.highlight(p1.buffer(), p1.cursor_position),
@@ -474,15 +381,15 @@ def cross_testing():
     p2 = CmdReaderTester(['./cmdReader'],     65536)
 
     _batch(lambda: choice(seq_simple),   200)
-    _batch(lambda: choice(seq_complete), int(1e8))
+    _batch(lambda: choice(seq_complete), int(1e8) - 1)
 
 def main():
     tasks = [
         ('testing key mapping', test_key_mapping),
         ('making REF',          lambda: make('ref')),
-        # ('testing REF',         lambda: test_official_suite('./cmdReader-ref')),
+        # ('testing REF',         lambda: test_suite(OFFICIAL_TESTS, './cmdReader-ref')),
         ('making test HW2',     lambda: make()),
-        # ('testing HW2',         lambda: test_official_suite('./cmdReader')),
+        # ('testing HW2',         lambda: test_suite(OFFICIAL_TESTS)),
         ('cross testing',       lambda: cross_testing()),
     ]
 
@@ -490,6 +397,106 @@ def main():
         print('========== {:^24} =========='.format(desc))
         func()
         print('')
+        # stop briefly for checking result
+        sleep(.5)
+
+# official test suite translated from ./hw2.test1
+_SEQ_LONG_HISTORY = ''.join(
+    [ str(i) + KEY_NEWLINE
+        for i
+        in (2, 3, 4, 5, 6, 7, 8, 9, 0, 11, 12, 13, 14) ]
+)
+
+OFFICIAL_TESTS = [
+    ('Hello World'       , 'Hello World'                      , 11) ,
+    ('  '                , 'Hello World  '                    , 13) ,
+    (KEY_LINE_BEGIN      , 'Hello World  '                    , 0)  ,
+    (' '                 , ' Hello World  '                   , 1)  ,
+    ('YaYa'              , ' YaYaHello World  '               , 5)  ,
+    (' '                 , ' YaYa Hello World  '              , 6)  ,
+    (KEY_DELETE * 2      , ' YaYa llo World  '                , 6)  ,
+    (KEY_BACKSPACE * 3   , ' Yallo World  '                   , 3)  ,
+    (KEY_NEWLINE * 2     , ''                                 , 0)  ,
+    (KEY_ARROW_UP        , 'Yallo World'                      , 11) ,
+    (KEY_ARROW_LEFT * 6  , 'Yallo World'                      , 5)  ,
+    ('w'                 , 'Yallow World'                     , 6)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_ARROW_UP * 3    , 'Yallo World'                      , 11  , 1) ,
+    ('!!'                , 'Yallo World!!'                    , 13) ,
+    (KEY_ARROW_DOWN * 4  , ''                                 , 0   , 2) ,
+    ('You may say'       , 'You may say'                      , 11) ,
+    (KEY_HOME            , 'You may say'                      , 0)  ,
+    ('  '                , '  You may say'                    , 2)  ,
+    (KEY_ARROW_UP * 2    , 'Yallo World'                      , 11) ,
+    (KEY_BACKSPACE * 9   , 'Ya'                               , 2)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    # TODO: atomic operation to check history
+    ('I am a dreamer'    , 'I am a dreamer'                   , 14) ,
+    ('  '                , 'I am a dreamer  '                 , 16) ,
+    (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
+    ('Da'                , 'YaDa'                             , 4)  ,
+    (KEY_ARROW_DOWN      , 'I am a dreamer  '                 , 16) ,
+    (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
+    (KEY_BACKSPACE * 3   , ''                                 , 0   , 1) ,
+    (KEY_DELETE          , ''                                 , 0   , 1) ,
+    ('   '               , '   '                              , 3)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
+    (KEY_ARROW_UP        , 'Yallow World'                     , 12) ,
+    (KEY_ARROW_DOWN * 3  , ''                                 , 0   , 1) ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    ('But not'           , 'But not'                          , 7)  ,
+    ('  '                , 'But not  '                        , 9)  ,
+    (KEY_HOME            , 'But not  '                        , 0)  ,
+    (KEY_END             , 'But not  '                        , 9)  ,
+    (KEY_ARROW_LEFT * 5  , 'But not  '                        , 4)  ,
+    ('I\'m'              , 'But I\'mnot  '                    , 7)  ,
+    (' '                 , 'But I\'m not  '                   , 8)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_ARROW_UP        , 'But I\'m not'                     , 11) ,
+    (' '                 , 'But I\'m not '                    , 12) ,
+    ('the only one.'     , 'But I\'m not the only one.'       , 25) ,
+    (KEY_ARROW_UP * 2    , 'Yallow World'                     , 12) ,
+    (KEY_DELETE * 2      , 'Yallow World'                     , 12  , 2) ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_ARROW_UP        , 'Yallow World'                     , 12) ,
+    (KEY_ARROW_UP        , 'But I\'m not'                     , 11) ,
+    (KEY_ARROW_UP        , 'Ya'                               , 2)  ,
+    ('...'               , 'Ya...'                            , 5)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    # TODO: atomic operation to check history
+    ('I hope someday'    , 'I hope someday'                   , 14) ,
+    (KEY_ARROW_LEFT * 8  , 'I hope someday'                   , 6)  ,
+    (KEY_TAB             , 'I hope   someday'                 , 8)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_TAB             , ' ' * 8                            , 8)  ,
+    ('you\'ll join us.'  , '        you\'ll join us.'         , 23) ,
+    (KEY_HOME            , '        you\'ll join us.'         , 0)  ,
+    ('1'                 , '1        you\'ll join us.'        , 1)  ,
+    (KEY_LINE_END        , '1        you\'ll join us.'        , 24) ,
+    (KEY_TAB             , '1        you\'ll join us.       ' , 32) ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (_SEQ_LONG_HISTORY   , ''                                 , 0)  ,
+    ('And the world'     , 'And the world'                    , 13) ,
+    (KEY_PAGEUP          , '5'                                , 1)  ,
+    (KEY_PAGEUP          , 'Yallow World'                     , 12) ,
+    (KEY_PAGEUP          , 'Yallo World'                      , 11) ,
+    (KEY_PAGEUP          , 'Yallo World'                      , 11  , 1) ,
+    (KEY_PAGEDOWN        , '4'                                , 1)  ,
+    (KEY_PAGEDOWN        , '14'                               , 2)  ,
+    (KEY_PAGEDOWN        , 'And the world'                    , 13) ,
+    (KEY_PAGEDOWN        , 'And the world'                    , 13  , 1) ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    ('will live as one!' , 'will live as one!'                , 17) ,
+    (KEY_PAGEUP          , '6'                                , 1)  ,
+    (' '                 , '6 '                               , 2)  ,
+    ('imagine'           , '6 imagine'                        , 9)  ,
+    (KEY_NEWLINE         , ''                                 , 0)  ,
+    (KEY_PAGEDOWN        , ''                                 , 0   , 1) ,
+    (KEY_ARROW_UP * 12   , '5'                                , 1)  ,
+    (KEY_PAGEDOWN * 2    , ''                                 , 0)  ,
+    # end of the test
+]
 
 
 if __name__ == '__main__':
