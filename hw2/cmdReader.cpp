@@ -148,7 +148,6 @@ CmdParser::deleteChar()
    _readBufEnd--;
    /* 4., 7. */
    this->moveBufPtr(bufPtrOri);
-   // cout << "\nbuffer is now [" << _readBuf << "].\n";
    return true;
 }
 
@@ -308,8 +307,6 @@ CmdParser::addHistory()
    if (_tempCmdStored) {
       // replace it
       _history.pop_back();
-      // _history.push_back(str);
-      // _history[(int)_history.size() - 1].assign(str);
       _tempCmdStored = false;
    }
    if (str.size() > 0) {
