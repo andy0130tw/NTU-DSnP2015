@@ -27,6 +27,9 @@
 *.out
 *.app
 
+# CTags
+tags
+
 # bundler by LeoMao
 bundler.py
 
