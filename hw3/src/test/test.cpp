@@ -6,6 +6,7 @@
   Copyright    [ Copyleft(c) 2015-present LaDs(III), GIEE, NTU, Taiwan ]
 ****************************************************************************/
 #include <iostream>
+#include <cstdlib>
 #include "dbTable.h"
 
 using namespace std;
