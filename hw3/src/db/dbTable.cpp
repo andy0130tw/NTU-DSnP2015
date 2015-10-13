@@ -24,6 +24,10 @@ ostream& operator << (ostream& os, const DBRow& r)
    // TODO: to print out a row.
    // - Data are seperated by a space. No trailing space at the end.
    // - Null cells are printed as '.'
+   for (size_t i = 0; i < r.size(); i++) {
+      if (i != 0) os << ' ';
+      DBTable::printData(os, r[i]);
+   }
    return os;
 }
 
@@ -32,6 +36,15 @@ ostream& operator << (ostream& os, const DBTable& t)
    // TODO: to print out a table
    // - Data are seperated by setw(6) and aligned right.
    // - Null cells should be left blank (printed as ' ').
+   for (size_t i = 0; i < t.nRows(); i++) {
+      for (size_t j = 0; j < t.nCols(); j++) {
+         os << setw(6) << right;
+         if (t[i][j] == INT_MAX)
+            os << ' ';
+         else
+            DBTable::printData(os, t[i][j]);
+      }
+   }
    return os;
 }
 
@@ -39,6 +52,9 @@ ifstream& operator >> (ifstream& ifs, DBTable& t)
 {
    // TODO: to read in data from csv file and store them in a table
    // - You can assume all the data of the table are in a single line.
+   // while (1) {
+   // }
+
    return ifs;
 }
 
@@ -49,6 +65,7 @@ void
 DBRow::removeCell(size_t c)
 {
    // TODO
+   _data.erase(_data.begin() + c);
 }
 
 /*****************************************/
@@ -59,6 +76,12 @@ DBSort::operator() (const DBRow& r1, const DBRow& r2) const
 {
    // TODO: called as a functional object that compares the data in r1 and r2
    //       based on the order defined in _sortOrder
+   const vector<size_t>& _so = _sortOrder;
+   for (size_t i = 0; i < _so.size(); i++) {
+      const int& a = r1[_so[i]];
+      const int& b = r2[_so[i]];
+      if (a != b) return a < b;
+   }
    return false;
 }
 
@@ -69,18 +92,23 @@ void
 DBTable::reset()
 {
    // TODO
+   _table.clear();
 }
 
 void
 DBTable::addCol(const vector<int>& d)
 {
    // TODO: add a column to the right of the table. Data are in 'd'.
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      _table[i].addData(d[i]);
+   }
 }
 
 void
 DBTable::delRow(int c)
 {
    // TODO: delete row #c. Note #0 is the first row.
+   _table.erase(_table.begin() + c);
 }
 
 void
@@ -99,21 +127,41 @@ float
 DBTable::getMax(size_t c) const
 {
    // TODO: get the max data in column #c
-   return 0.0;
+   float rtn = NAN;
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (_table[i][c] == INT_MAX) continue;
+      if (rtn == NAN || rtn < _table[i][c])
+         rtn = _table[i][c];
+   }
+   return rtn;
 }
 
 float
 DBTable::getMin(size_t c) const
 {
    // TODO: get the min data in column #c
+   float rtn = NAN;
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (_table[i][c] == INT_MAX) continue;
+      if (rtn == NAN || rtn > _table[i][c])
+         rtn = _table[i][c];
+   }
+   return rtn;
    return 0.0;
 }
 
-float 
+float
 DBTable::getSum(size_t c) const
 {
    // TODO: compute the sum of data in column #c
-   return 0.0;
+   float rtn = NAN;
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (_table[i][c] == INT_MAX)
+         continue;
+      if (rtn == NAN) rtn = 0;
+      rtn += _table[i][c];
+   }
+   return rtn;
 }
 
 int
@@ -121,20 +169,39 @@ DBTable::getCount(size_t c) const
 {
    // TODO: compute the number of distinct data in column #c
    // - Ignore null cells
-   return 0;
+   set<int> pool;
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (_table[i][c] != INT_MAX)
+         pool.insert(_table[i][c]);
+   }
+   return pool.size();
 }
 
 float
 DBTable::getAve(size_t c) const
 {
    // TODO: compute the average of data in column #c
-   return 0.0;
+   // we can know whether the cells are all null,
+   // so no need to initialize it to NAN
+   float rtn = 0;
+   int cnt = 0;
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (_table[i][c] != INT_MAX){
+         rtn += _table[i][c];
+         cnt++;
+      }
+   }
+
+   if (!cnt)
+      return NAN;
+   return rtn / cnt;
 }
 
 void
 DBTable::sort(const struct DBSort& s)
 {
    // TODO: sort the data according to the order of columns in 's'
+   std::sort(_table.begin(), _table.end(), s);
 }
 
 void
@@ -143,6 +210,10 @@ DBTable::printCol(size_t c) const
    // TODO: to print out a column.
    // - Data are seperated by a space. No trailing space at the end.
    // - Null cells are printed as '.'
+   for (size_t i = 0, n = _table.size(); i < n; i++) {
+      if (i != 0) cout << ' ';
+      printData(cout, _table[i][c]);
+   }
 }
 
 void
