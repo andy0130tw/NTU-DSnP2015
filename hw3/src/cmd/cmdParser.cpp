@@ -145,7 +145,7 @@ CmdParser::parseCmd(string& option)
 
 // This function is called by pressing 'Tab'.
 // It is to list the partially matched commands.
-// "str" is the partial string before current cursor position. It can be 
+// "str" is the partial string before current cursor position. It can be
 // a null string, or begin with ' '. The beginning ' ' will be ignored.
 //
 // Several possibilities after pressing 'Tab'
@@ -218,7 +218,6 @@ CmdParser::listCmd(const string& str)
 // ------------
 // 1. The mandatory part of the command string (stored in _cmdMap) must match
 // 2. The optional part can be partially omitted.
-//    ==> Checked by the CmdExec::checkOptCmd(const string&) function
 // 3. All string comparison are "case-insensitive".
 //
 CmdExec*
