@@ -9,7 +9,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
-#include "util.h"
+#include "../util/util.h"
 #include "cmdParser.h"
 
 using namespace std;
@@ -29,7 +29,18 @@ bool
 CmdParser::openDofile(const string& dof)
 {
    // TODO...
+   // max recursion depth, see DofileCmd::exec in cmdCommon.cpp
+   // 1021 recursion mystery ref:
+   // https://www.ptt.cc/bbs/EE_DSnP/M.1257607270.A.A28.html
+
+   // if (this->_dofileStack.size() >= 1021)
+   //    return false;
    _dofile = new ifstream(dof.c_str());
+   if (!_dofile->is_open()) {
+      closeDofile();
+      return false;
+   }
+   this->_dofileStack.push(_dofile);
    return true;
 }
 
@@ -39,7 +50,13 @@ CmdParser::closeDofile()
 {
    assert(_dofile != 0);
    // TODO...
+   _dofile->close();
    delete _dofile;
+   if (!this->_dofileStack.empty()) {
+      _dofile = this->_dofileStack.top();
+      this->_dofileStack.pop();
+   } else
+      _dofile = 0;
 }
 
 // Return false if registration fails
@@ -98,6 +115,9 @@ void
 CmdParser::printHelps() const
 {
    // TODO...
+   for (CmdMap::const_iterator i = _cmdMap.begin(), n = _cmdMap.end(); i != n; i++) {
+      i->second->help();
+   }
 }
 
 void
@@ -139,6 +159,17 @@ CmdParser::parseCmd(string& option)
    string str = _history.back();
 
    // TODO...
+   string cmd;
+   size_t optionStart = myStrGetTok(str, cmd);
+   CmdExec* cmdEx = this->getCmd(cmd);
+   if (cmdEx) {
+      option = "";
+      if (optionStart != string::npos)
+         option = str.substr(optionStart);
+      return cmdEx;
+   }
+   // not found
+   cerr << "Error: illegal command!! (" << str << ")\n";
    assert(str[0] != 0 && str[0] != ' ');
    return NULL;
 }
@@ -223,9 +254,24 @@ CmdParser::listCmd(const string& str)
 CmdExec*
 CmdParser::getCmd(string cmd)
 {
-   CmdExec* e = 0;
    // TODO...
-   return e;
+   CmdExec* e;
+   string buf;
+   string cmdOpt;
+   for (int i = 0, n = cmd.length(); i < n; i++) {
+      buf += toupper(cmd[i]);
+      if (this->_cmdMap.count(buf) > 0) {
+         e = this->_cmdMap[buf];
+         cmdOpt = cmd.substr(buf.length());
+         if (!cmdOpt.empty() && myStrNCmp(e->getOptCmd(), cmdOpt, cmdOpt.length()) != 0) {
+            // remaining part does not match
+            return 0;
+         }
+         return e;
+      }
+   }
+   // e remains NULL
+   return 0;
 }
 
 

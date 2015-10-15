@@ -14,6 +14,9 @@
 #include <algorithm>
 #include "dbTable.h"
 
+// custom import
+#include "../util/util.h"
+
 using namespace std;
 
 /*****************************************/
@@ -44,6 +47,7 @@ ostream& operator << (ostream& os, const DBTable& t)
          else
             DBTable::printData(os, t[i][j]);
       }
+      os << endl;
    }
    return os;
 }
@@ -52,9 +56,60 @@ ifstream& operator >> (ifstream& ifs, DBTable& t)
 {
    // TODO: to read in data from csv file and store them in a table
    // - You can assume all the data of the table are in a single line.
-   // while (1) {
-   // }
+   string input, bufLine;
+   std::getline(ifs, input);
 
+   int last_eol = 0;
+   while (1) {
+      size_t pos_eol = myStrGetTok(input, bufLine, last_eol, '\r');
+      // also break if an empty line is encountered
+      if (pos_eol == string::npos || bufLine.empty())
+         break;
+      last_eol = pos_eol;
+
+      DBRow row;
+      // force a comma at the end
+      bufLine += ',';
+
+      string buf;
+      for (int i = 0, n = bufLine.size(); i < n; i++) {
+         if (bufLine[i] == ',') {
+            int num;
+            if (myStr2Int(buf, num))
+               row.addData(num);
+            else
+               row.addData(INT_MAX);
+            buf.clear();
+         } else {
+            buf += bufLine[i];
+         }
+      }
+      t.addRow(row);
+   }
+
+   // while (1) {
+   //    // break if an empty line is encountered
+   //    if (!s.size())
+   //       break;
+
+   //    // make buffer flushed at EOL
+   //    s += ',';
+   //    DBRow row;
+   //    string buf;
+   //    for (int i = 0, n = s.size(); i < n; i++) {
+   //       if (s[i] == ',') {
+   //          int num;
+   //          if (myStr2Int(buf, num))
+   //             row.addData(num);
+   //          else
+   //             row.addData(INT_MAX);
+   //          buf.clear();
+   //       } else {
+   //          buf += s[i];
+   //       }
+   //    }
+   //    t.addRow(row);
+   // }
    return ifs;
 }
 
