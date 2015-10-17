@@ -90,7 +90,7 @@ DBAppendCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBAveCmd::exec(const string& option)
-{  
+{
    // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
@@ -109,7 +109,7 @@ DBAveCmd::exec(const string& option)
 
 void
 DBAveCmd::usage(ostream& os) const
-{     
+{
    os << "Usage: DBAVerage <(int colIdx)>" << endl;
 }
 
@@ -126,7 +126,7 @@ DBAveCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBCountCmd::exec(const string& option)
-{  
+{
    // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
@@ -142,7 +142,7 @@ DBCountCmd::exec(const string& option)
 
 void
 DBCountCmd::usage(ostream& os) const
-{     
+{
    os << "Usage: DBCount <(int colIdx)>" << endl;
 }
 
@@ -202,7 +202,7 @@ DBDelCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBMaxCmd::exec(const string& option)
-{  
+{
    // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
@@ -218,7 +218,7 @@ DBMaxCmd::exec(const string& option)
 
 void
 DBMaxCmd::usage(ostream& os) const
-{     
+{
    os << "Usage: DBMAx <(int colIdx)>" << endl;
 }
 
@@ -235,7 +235,7 @@ DBMaxCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBMinCmd::exec(const string& option)
-{  
+{
    // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
@@ -251,7 +251,7 @@ DBMinCmd::exec(const string& option)
 
 void
 DBMinCmd::usage(ostream& os) const
-{     
+{
    os << "Usage: DBMIn <(int colIdx)>" << endl;
 }
 
@@ -362,7 +362,7 @@ DBSortCmd::exec(const string& option)
    vector<string> options;
    if (!CmdExec::lexOptions(option, options))
       return CMD_EXEC_ERROR;
-   
+
    if (options.empty())
       return CmdExec::errorOption(CMD_OPT_MISSING, "");
 
@@ -396,7 +396,7 @@ DBSortCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBSumCmd::exec(const string& option)
-{  
+{
    // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
@@ -412,7 +412,7 @@ DBSumCmd::exec(const string& option)
 
 void
 DBSumCmd::usage(ostream& os) const
-{     
+{
    os << "Usage: DBSUm <(int colIdx)>" << endl;
 }
 

@@ -149,19 +149,19 @@ HistoryCmd::help() const
 // (1) mcalc> dofile do1
 //     mcalc> ...        <== some other commands
 //     mcalc> dofile do2 <== there is a "dofile do1" in do2
-//     mcalc>          
+//     mcalc>
 // (2) mcalc> dofile t
 //     Error: cannot open file "t"!!
 //     mcalc> dofile do <== can open a dofile "do" after failing to open "t"
-//     mcalc>          
+//     mcalc>
 // (3) If a dofile xx contains a line "dofile xx" calling itself,
 //     where xx may or may not exist...  (recursive dofiles)
 //     (Let the max recursion depth = 1024)
 //
 CmdExecStatus
 DofileCmd::exec(const string& option)
-{     
-   // check option 
+{
+   // check option
    string token;
    if (!CmdExec::lexSingleOption(option, token, false))
       return CMD_EXEC_ERROR;
@@ -172,10 +172,10 @@ DofileCmd::exec(const string& option)
 
 void
 DofileCmd::usage(ostream& os) const
-{  
+{
    os << "Usage: DOfile <(string file)>" << endl;
-}  
-      
+}
+
 void
 DofileCmd::help() const
 {
