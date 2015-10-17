@@ -9,7 +9,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
-#include "../util/util.h"
+#include "util.h"
 #include "cmdParser.h"
 
 using namespace std;
@@ -238,6 +238,57 @@ void
 CmdParser::listCmd(const string& str)
 {
    // TODO...
+   vector<string> cmd_filtered;
+   // vector<CmdRegPair> cmd_filtered;
+   string cmd;
+   myStrGetTok(str, cmd);
+
+   // capture last matched; useful when only one is matched
+   CmdRegPair *cmdCaptured;
+
+   for (CmdMap::const_iterator i = _cmdMap.begin(); i != _cmdMap.end(); i++) {
+      string cand = i->first + i->second->getOptCmd();
+      if (cmd.empty() || (myStrNCmp(cand, cmd, min(cand.length(), cmd.length())) == 0)) {
+         cmd_filtered.push_back(cand);
+         // cmd_filtered.push_back(CmdRegPair(cand, i));
+         cmdCaptured = (CmdRegPair *)&(*i);
+      }
+   }
+   size_t matched = cmd_filtered.size();
+
+   if (matched > 1) {
+      // case 1 & 2: list all (filtered) commands
+      cout << endl;
+      int cnt = 0;
+      for (size_t i = 0; i < matched; i++) {
+         if (cnt != 0 && cnt % 5 == 0)
+            cout << endl;
+         cnt++;
+         cout << setw(12) << left << cmd_filtered[i];
+      }
+      reprintCmd();
+   } else if (matched <= 1) {
+
+      // if cursor is at an appropriate position for completion
+      if ((size_t)(_readBufPtr - _readBuf) <= cmd.length()) {
+         // case 3: single completable match; complete it
+         for (size_t cmdlen = cmd.length(); cmdlen < cmd_filtered[0].length(); cmdlen++)
+            insertChar(cmd_filtered[0][cmdlen]);
+         // if (_readBufPtr != _readBufEnd) {
+         insertChar(' ');
+         // }
+         // myStrNCmp(cmdCaptured->first, cmd, cmdCaptured->first.length()) == 0
+      } else if (myStrNCmp(cmdCaptured->first, cmd, cmdCaptured->first.length()) == 0) {
+         // case 5: single match; show usage
+         cout << endl;
+         cmdCaptured->second->usage(cout);
+         reprintCmd();
+      } else {
+         // case 4 & 6: no match, or matched but not completable
+         mybeep();
+      }
+
+   }
 }
 
 // cmd is a copy of the original input
@@ -350,4 +401,3 @@ CmdExec::errorOption(CmdOptionError err, const string& opt) const
    }
    return CMD_EXEC_ERROR;
 }
-
