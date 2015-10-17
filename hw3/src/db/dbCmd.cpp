@@ -56,6 +56,20 @@ bool
 initDbCmd()
 {
    // TODO...
+   if (!(cmdMgr->regCmd("DBAPpend",  4, new DBAppendCmd) &&
+         cmdMgr->regCmd("DBAVerage", 4, new DBAveCmd) &&
+         cmdMgr->regCmd("DBCount",   3, new DBCountCmd) &&
+         cmdMgr->regCmd("DBDelete",  3, new DBDelCmd) &&
+         cmdMgr->regCmd("DBMAx",     4, new DBMaxCmd) &&
+         cmdMgr->regCmd("DBMIn",     4, new DBMinCmd) &&
+         cmdMgr->regCmd("DBPrint",   3, new DBPrintCmd) &&
+         cmdMgr->regCmd("DBRead",    3, new DBReadCmd) &&
+         cmdMgr->regCmd("DBSOrt",    4, new DBSortCmd) &&
+         cmdMgr->regCmd("DBSUm",     4, new DBSumCmd)
+      )) {
+      cerr << "Registering \"db\" commands fails... exiting" << endl;
+      return false;
+   }
    return true;
 }
 
@@ -67,6 +81,43 @@ DBAppendCmd::exec(const string& option)
 {
    // TODO...
    // check option
+   vector<string> tokens;
+   vector<int> data;
+   lexOptions(option, tokens);
+   bool doRow = false;
+   size_t toklim;
+
+   if (!tokens.size())
+      return errorOption(CMD_OPT_MISSING, "");
+
+   if (myStrNCmp("-Row", tokens[0], 2) == 0) doRow = true;
+   else if (myStrNCmp("-Column", tokens[0], 2) != 0)
+      return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[0]);
+
+   // determined by the size of the other side
+   toklim = (doRow ? dbtbl.nCols() : dbtbl.nRows()) + 1;
+
+   if (tokens.size() == 1)
+      return errorOption(CMD_OPT_MISSING, tokens[0]);
+
+   int num;
+   // ignore tokens beyond required ones
+   for (size_t i = 1; i < toklim; i++) {
+      // insert null if no such token
+      if (i >= tokens.size() || tokens[i] == "-")
+         data.push_back(INT_MAX);
+      else if (myStr2Int(tokens[i], num))
+         data.push_back(num);
+      else {
+         cerr << "Error: \"" << tokens[i] << "\" is not an integer!!" << endl;
+         return CMD_EXEC_ERROR;
+      }
+   }
+
+   if (doRow)
+      dbtbl.addRow(DBRow(data));
+   else
+      dbtbl.addCol(data);
 
    return CMD_EXEC_DONE;
 }
@@ -269,8 +320,77 @@ DBMinCmd::help() const
 //----------------------------------------------------------------------
 CmdExecStatus
 DBPrintCmd::exec(const string& option)
-{  
+{
    // TODO...
+
+   // check for table status
+   // (according to ref program, this is performed at first)
+   if (!dbtbl) {
+      // this must fails
+      int _;
+      checkColIdx("0", _);
+      return CMD_EXEC_ERROR;
+   }
+
+   vector<string> tokens;
+   lexOptions(option, tokens);
+   size_t toklen = tokens.size();
+
+   int rowIdx, colIdx;
+
+   if (!toklen) return errorOption(CMD_OPT_MISSING, "");
+
+   if (myStrNCmp("-Table", tokens[0], 2) == 0) {
+      if (toklen > 1)
+         return errorOption(CMD_OPT_EXTRA, tokens[1]);
+
+      // needs review
+      for (size_t i = 0; i < dbtbl.nRows(); i++) {
+         for (size_t j = 0; j < dbtbl.nCols(); j++) {
+            cout << setw(6) << right;
+            if (dbtbl[i][j] == INT_MAX)
+               cout << '.';
+            else
+               DBTable::printData(cout, dbtbl[i][j]);
+         }
+         cout << endl;
+      }
+      // according to ref program
+      cout << endl;
+   } else if (myStrNCmp("-Summary", tokens[0], 2) == 0) {
+      if (toklen > 1)
+         return errorOption(CMD_OPT_EXTRA, tokens[1]);
+
+      dbtbl.printSummary();
+   } else {
+      if (toklen == 1)
+         return errorOption(CMD_OPT_MISSING, tokens[0]);
+      if (toklen > 2)
+         return errorOption(CMD_OPT_EXTRA, tokens[2]);
+
+      if (myStrNCmp("-Row", tokens[0], 2) == 0) {
+         // -Row (int rowIdx)
+         if (!checkRowIdx(tokens[1], rowIdx)) return CMD_EXEC_ERROR;
+         cout << dbtbl[rowIdx] << endl;
+
+      } else if (myStrNCmp("-Column", tokens[0], 2) == 0) {
+         // -Row (int colIdx)
+         if (!checkRowIdx(tokens[1], colIdx)) return CMD_EXEC_ERROR;
+         dbtbl.printCol(colIdx);
+         cout << endl;
+      } else {
+         // (int rowIdx) (int colIdx)
+         int rowIdx, colIdx;
+         if (toklen < 2) {
+            return errorOption(CMD_OPT_MISSING, tokens[0]);
+         }
+         if (!checkRowIdx(tokens[0], rowIdx)) return CMD_EXEC_ERROR;
+         if (!checkColIdx(tokens[1], colIdx)) return CMD_EXEC_ERROR;
+
+         DBTable::printData(cout, dbtbl[rowIdx][colIdx], true);
+         cout << endl;
+      }
+   }
 
    return CMD_EXEC_DONE;
 }
@@ -285,7 +405,9 @@ DBPrintCmd::usage(ostream& os) const
 void
 DBPrintCmd::help() const
 {
-   cout << setw(15) << left << "print the data in the table" << endl;
+   // forgotten by Ric
+   cout << setw(15) << left << "DBPrint:"
+        << "print the data in the table" << endl;
 }
 
 
