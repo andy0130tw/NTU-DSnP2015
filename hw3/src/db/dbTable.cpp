@@ -15,7 +15,7 @@
 #include "dbTable.h"
 
 // custom import
-#include "../util/util.h"
+#include "util.h"
 
 using namespace std;
 
