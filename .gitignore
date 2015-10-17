@@ -29,6 +29,7 @@
 
 # CTags
 tags
+.tags*
 
 # bundler by LeoMao
 bundler.py
