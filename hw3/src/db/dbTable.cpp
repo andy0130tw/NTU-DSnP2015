@@ -57,22 +57,26 @@ ifstream& operator >> (ifstream& ifs, DBTable& t)
    // TODO: to read in data from csv file and store them in a table
    // - You can assume all the data of the table are in a single line.
    string input, bufLine;
-   std::getline(ifs, input);
+   getline(ifs, input);
 
-   int last_eol = 0;
+   size_t last_eol = 0;
    while (1) {
-      size_t pos_eol = myStrGetTok(input, bufLine, last_eol, '\r');
+      if (last_eol >= input.length())
+         break;
+      size_t pos_eol = input.find_first_of('\r', last_eol);
+      bufLine = input.substr(last_eol, pos_eol - last_eol);
+      last_eol = pos_eol + 1;
+
       // also break if an empty line is encountered
       if (pos_eol == string::npos || bufLine.empty())
          break;
-      last_eol = pos_eol;
 
       DBRow row;
       // force a comma at the end
       bufLine += ',';
-
+      size_t n = bufLine.length();
       string buf;
-      for (int i = 0, n = bufLine.size(); i < n; i++) {
+      for (size_t i = 0; i < n; i++) {
          if (bufLine[i] == ',') {
             int num;
             if (myStr2Int(buf, num))
@@ -87,29 +91,6 @@ ifstream& operator >> (ifstream& ifs, DBTable& t)
       t.addRow(row);
    }
 
-   // while (1) {
-   //    // break if an empty line is encountered
-   //    if (!s.size())
-   //       break;
-
-   //    // make buffer flushed at EOL
-   //    s += ',';
-   //    DBRow row;
-   //    string buf;
-   //    for (int i = 0, n = s.size(); i < n; i++) {
-   //       if (s[i] == ',') {
-   //          int num;
-   //          if (myStr2Int(buf, num))
-   //             row.addData(num);
-   //          else
-   //             row.addData(INT_MAX);
-   //          buf.clear();
-   //       } else {
-   //          buf += s[i];
-   //       }
-   //    }
-   //    t.addRow(row);
-   // }
    return ifs;
 }
 
@@ -132,7 +113,8 @@ DBSort::operator() (const DBRow& r1, const DBRow& r2) const
    // TODO: called as a functional object that compares the data in r1 and r2
    //       based on the order defined in _sortOrder
    const vector<size_t>& _so = _sortOrder;
-   for (size_t i = 0; i < _so.size(); i++) {
+   const size_t n = _so.size();
+   for (size_t i = 0; i < n; i++) {
       const int& a = r1[_so[i]];
       const int& b = r2[_so[i]];
       if (a != b) return a < b;
@@ -154,7 +136,8 @@ void
 DBTable::addCol(const vector<int>& d)
 {
    // TODO: add a column to the right of the table. Data are in 'd'.
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   const size_t n = _table.size();
+   for (size_t i = 0; i < n; i++) {
       _table[i].addData(d[i]);
    }
 }
@@ -170,7 +153,8 @@ void
 DBTable::delCol(int c)
 {
    // delete col #c. Note #0 is the first row.
-   for (size_t i = 0, n = _table.size(); i < n; ++i)
+   const size_t n = _table.size();
+   for (size_t i = 0; i < n; ++i)
       _table[i].removeCell(c);
 }
 
@@ -183,9 +167,10 @@ DBTable::getMax(size_t c) const
 {
    // TODO: get the max data in column #c
    float rtn = NAN;
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   const size_t n = nRows();
+   for (size_t i = 0; i < n; i++) {
       if (_table[i][c] == INT_MAX) continue;
-      if (rtn == NAN || rtn < _table[i][c])
+      if (isnan(rtn) || rtn < _table[i][c])
          rtn = _table[i][c];
    }
    return rtn;
@@ -196,13 +181,13 @@ DBTable::getMin(size_t c) const
 {
    // TODO: get the min data in column #c
    float rtn = NAN;
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   const size_t n = nRows();
+   for (size_t i = 0; i < n; i++) {
       if (_table[i][c] == INT_MAX) continue;
-      if (rtn == NAN || rtn > _table[i][c])
+      if (isnan(rtn) || rtn > _table[i][c])
          rtn = _table[i][c];
    }
    return rtn;
-   return 0.0;
 }
 
 float
@@ -210,10 +195,11 @@ DBTable::getSum(size_t c) const
 {
    // TODO: compute the sum of data in column #c
    float rtn = NAN;
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   const size_t n = nRows();
+   for (size_t i = 0; i < n; i++) {
       if (_table[i][c] == INT_MAX)
          continue;
-      if (rtn == NAN) rtn = 0;
+      if (isnan(rtn)) rtn = 0;
       rtn += _table[i][c];
    }
    return rtn;
@@ -225,7 +211,8 @@ DBTable::getCount(size_t c) const
    // TODO: compute the number of distinct data in column #c
    // - Ignore null cells
    set<int> pool;
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   const size_t n = nRows();
+   for (size_t i = 0; i < n; i++) {
       if (_table[i][c] != INT_MAX)
          pool.insert(_table[i][c]);
    }
@@ -240,7 +227,7 @@ DBTable::getAve(size_t c) const
    // so no need to initialize it to NAN
    float rtn = 0;
    int cnt = 0;
-   for (size_t i = 0, n = _table.size(); i < n; i++) {
+   for (size_t i = 0, n = nRows(); i < n; i++) {
       if (_table[i][c] != INT_MAX){
          rtn += _table[i][c];
          cnt++;

@@ -165,7 +165,7 @@ CmdParser::parseCmd(string& option)
    if (cmdEx) {
       option = "";
       if (optionStart != string::npos)
-         option = str.substr(optionStart);
+         option = str.substr(optionStart + 1);
       return cmdEx;
    }
    // not found
