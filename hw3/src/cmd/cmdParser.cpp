@@ -53,8 +53,8 @@ CmdParser::closeDofile()
    _dofile->close();
    delete _dofile;
    if (!this->_dofileStack.empty()) {
-      _dofile = this->_dofileStack.top();
       this->_dofileStack.pop();
+      _dofile = this->_dofileStack.top();
    } else
       _dofile = 0;
 }
