@@ -268,29 +268,30 @@ CmdParser::listCmd(const string& str)
          cout << setw(12) << left << cmd_filtered[i];
       }
       reprintCmd();
-   } else if (matched <= 1) {
-      // if cursor is at an appropriate position for completion
-      if (matched == 1) {
-         if ((size_t)(_readBufPtr - _readBuf) <= cmd.length()) {
-            // case 3: single completable match; complete it
-            for (size_t cmdlen = cmd.length(); cmdlen < cmd_filtered[0].length(); cmdlen++)
-               insertChar(cmd_filtered[0][cmdlen]);
-            // if (_readBufPtr != _readBufEnd) {
-            insertChar(' ');
-            // }
-            return;
-         } else if (matched == 1 && cmd.length() >= cmdCaptured->first.length() && myStrNCmp(cmd, cmdCaptured->first, cmdCaptured->first.length()) == 0) {
-            // case 5: single match; show usage
-            cout << endl;
-            cmdCaptured->second->usage(cout);
-            reprintCmd();
-            return;
-         }
-      }
-
-      // case 4 & 6: no match, or matched but not completable
-      mybeep();
+      return;
    }
+
+   if (matched == 1) {
+      // if cursor is at an appropriate position for completion
+      if ((size_t)(_readBufPtr - _readBuf) <= cmd.length()) {
+         // case 3: single completable match; complete it
+         for (size_t cmdlen = cmd.length(); cmdlen < cmd_filtered[0].length(); cmdlen++)
+            insertChar(cmd_filtered[0][cmdlen]);
+         // if (_readBufPtr != _readBufEnd) {
+         insertChar(' ');
+         // }
+         return;
+      } else if (cmd.length() >= cmdCaptured->first.length() && myStrNCmp(cmd, cmdCaptured->first, cmdCaptured->first.length()) == 0) {
+         // case 5: single match; show usage
+         cout << endl;
+         cmdCaptured->second->usage(cout);
+         reprintCmd();
+         return;
+      }
+   }
+
+   // case 4 & 6: no match or matched incompletely
+   mybeep();
 }
 
 // cmd is a copy of the original input
