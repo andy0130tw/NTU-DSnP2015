@@ -1,0 +1,123 @@
+mydb> dbr test_hw1.csv
+"test_hw1.csv" was read in successfully.
+
+mydb> do do_flow2
+
+mydb> dbap -c 3 4 5 6
+
+mydb> dbap -c 7 8 9 10
+
+mydb> dbap -r 11 - 13 -
+
+mydb> dbap -r - 17 - 19
+
+mydb> do do_flow3
+
+mydb> dbap -r 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (7, 4, 19)
+
+mydb> 
+mydb> dbap -c 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (7, 5, 20)
+
+mydb> 
+mydb> 
+mydb> do do_flow3
+
+mydb> dbap -r 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (8, 5, 21)
+
+mydb> 
+mydb> dbap -c 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (8, 6, 22)
+
+mydb> 
+mydb> 
+mydb> do do_flow3
+
+mydb> dbap -r 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (9, 6, 23)
+
+mydb> 
+mydb> dbap -c 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (9, 7, 24)
+
+mydb> 
+mydb> 
+mydb> dbsort 0 1 2
+
+mydb> 
+mydb> dbp -t
+     1     2     3     7   777   777   777
+     3     .     4     8     .     .     .
+     5     6     5     9     .     .     .
+    11     .    13     .     .     .     .
+   777     .     .     .     .     .     .
+   777     .     .     .     .     .     .
+   777     .     .     .     .     .     .
+     .     8     6    10     .     .     .
+     .    17     .    19     .     .     .
+
+
+mydb> do do_flow3
+
+mydb> dbap -r 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (10, 7, 25)
+
+mydb> 
+mydb> dbap -c 777
+
+mydb> do do_flow4
+
+mydb> dbp -s
+(#rows, #cols, #data) = (10, 8, 26)
+
+mydb> 
+mydb> 
+mydb> help
+DBAPpend:      append a row or column of data to the table
+DBAverage:     compute the average of a column
+DBCount:       report the distinct count of data in a column
+DBDelete:      delete a row or column from the table
+DBMAx:         report the maximum number of a column
+DBMIn:         report the minimum number of a column
+DBPrint:       print the data in the table
+DBRead:        read data from .csv file
+DBSort:        sort the data in the table
+DBSUm:         compute the summation of a column
+DOfile:        execute the commands in the dofile
+HELp:          print this help message
+HIStory:       print command history
+Quit:          quit the execution
+
+
+mydb> q -f
+
