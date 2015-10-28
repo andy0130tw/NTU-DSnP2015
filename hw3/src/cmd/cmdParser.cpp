@@ -53,8 +53,8 @@ CmdParser::closeDofile()
    _dofile->close();
    delete _dofile;
    if (!this->_dofileStack.empty()) {
-      _dofile = this->_dofileStack.top();
       this->_dofileStack.pop();
+      _dofile = this->_dofileStack.top();
    } else
       _dofile = 0;
 }
@@ -118,6 +118,7 @@ CmdParser::printHelps() const
    for (CmdMap::const_iterator i = _cmdMap.begin(), n = _cmdMap.end(); i != n; i++) {
       i->second->help();
    }
+   cout << endl;
 }
 
 void
@@ -267,8 +268,10 @@ CmdParser::listCmd(const string& str)
          cout << setw(12) << left << cmd_filtered[i];
       }
       reprintCmd();
-   } else if (matched <= 1) {
+      return;
+   }
 
+   if (matched == 1) {
       // if cursor is at an appropriate position for completion
       if ((size_t)(_readBufPtr - _readBuf) <= cmd.length()) {
          // case 3: single completable match; complete it
@@ -277,18 +280,18 @@ CmdParser::listCmd(const string& str)
          // if (_readBufPtr != _readBufEnd) {
          insertChar(' ');
          // }
-         // myStrNCmp(cmdCaptured->first, cmd, cmdCaptured->first.length()) == 0
-      } else if (myStrNCmp(cmdCaptured->first, cmd, cmdCaptured->first.length()) == 0) {
+         return;
+      } else if (cmd.length() >= cmdCaptured->first.length() && myStrNCmp(cmd, cmdCaptured->first, cmdCaptured->first.length()) == 0) {
          // case 5: single match; show usage
          cout << endl;
          cmdCaptured->second->usage(cout);
          reprintCmd();
-      } else {
-         // case 4 & 6: no match, or matched but not completable
-         mybeep();
+         return;
       }
-
    }
+
+   // case 4 & 6: no match or matched incompletely
+   mybeep();
 }
 
 // cmd is a copy of the original input
@@ -314,7 +317,7 @@ CmdParser::getCmd(string cmd)
       if (this->_cmdMap.count(buf) > 0) {
          e = this->_cmdMap[buf];
          cmdOpt = cmd.substr(buf.length());
-         if (!cmdOpt.empty() && myStrNCmp(e->getOptCmd(), cmdOpt, cmdOpt.length()) != 0) {
+         if (!cmdOpt.empty() && (e->getOptCmd().length() < cmdOpt.length() || myStrNCmp(e->getOptCmd(), cmdOpt, cmdOpt.length()) != 0)) {
             // remaining part does not match
             return 0;
          }

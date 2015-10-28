@@ -52,6 +52,18 @@ static bool checkRowIdx(const string& token, int& c)
    return true;
 }
 
+// my custom function XD
+static bool checkTableStatus()
+{
+   if (!dbtbl) {
+      // this must fails
+      int _;
+      checkColIdx("0", _);
+      return false;
+   }
+   return true;
+}
+
 bool
 initDbCmd()
 {
@@ -81,6 +93,7 @@ DBAppendCmd::exec(const string& option)
 {
    // TODO...
    // check option
+
    vector<string> tokens;
    vector<int> data;
    lexOptions(option, tokens);
@@ -93,6 +106,8 @@ DBAppendCmd::exec(const string& option)
    if (myStrNCmp("-Row", tokens[0], 2) == 0) doRow = true;
    else if (myStrNCmp("-Column", tokens[0], 2) != 0)
       return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[0]);
+
+   if (!checkTableStatus()) return CMD_EXEC_ERROR;
 
    // determined by the size of the other side
    toklim = (doRow ? dbtbl.nCols() : dbtbl.nRows()) + 1;
@@ -325,12 +340,7 @@ DBPrintCmd::exec(const string& option)
 
    // check for table status
    // (according to ref program, this is performed at first)
-   if (!dbtbl) {
-      // this must fails
-      int _;
-      checkColIdx("0", _);
-      return CMD_EXEC_ERROR;
-   }
+   if (!checkTableStatus()) return CMD_EXEC_ERROR;
 
    vector<string> tokens;
    lexOptions(option, tokens);
