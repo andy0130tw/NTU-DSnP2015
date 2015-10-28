@@ -1,0 +1,8 @@
+dbap -c 3 4 5 6
+dbap -c 7 8 9 10
+dbap -r 11 - 13 -
+dbap -r - 17 - 19
+do do_flow3
+do do_flow3
+do do_flow3
+dbsort 0 1 2
