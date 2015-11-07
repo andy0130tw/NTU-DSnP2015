@@ -83,7 +83,10 @@ MTNewCmd::exec(const string& option)
    vector<string> tokens;
    int numObj = -1, arrSize = -1;
 
-   CmdExec::lexOptions(option, tokens);
+   // this should not fail
+   if (!CmdExec::lexOptions(option, tokens))
+      return CMD_EXEC_ERROR;
+
    size_t toklen = tokens.size();
 
    if (toklen < 1)
@@ -103,12 +106,12 @@ MTNewCmd::exec(const string& option)
          i++;
          if (!myStr2Int(tokens[i], arrSize) || arrSize <= 0)
             return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[i]);
-      } else if (numObj < 0) {
-         if (!myStr2Int(tokens[i], numObj) || numObj <= 0)
-            return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[i]);
       } else {
          // mandatory arguments already encountered
-         return CmdExec::errorOption(CMD_OPT_EXTRA, tokens[i]);
+         if (numObj >= 0)
+            return CmdExec::errorOption(CMD_OPT_EXTRA, tokens[i]);
+         if (!myStr2Int(tokens[i], numObj) || numObj <= 0)
+            return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[i]);
       }
    }
 
