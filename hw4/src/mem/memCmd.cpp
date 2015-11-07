@@ -79,6 +79,45 @@ CmdExecStatus
 MTNewCmd::exec(const string& option)
 {
    // TODO
+   // check options
+   vector<string> tokens;
+   int numObj = -1, arrSize = -1;
+
+   CmdExec::lexOptions(option, tokens);
+   size_t toklen = tokens.size();
+
+   if (toklen < 1)
+      return CmdExec::errorOption(CMD_OPT_MISSING, "");
+   // if (toklen > 3)
+      // return CmdExec::errorOption(CMD_OPT_EXTRA, tokens[3]);
+
+   for (size_t i = 0, n = tokens.size(); i < n; i++) {
+      if (myStrNCmp("-Array", tokens[i], 2) == 0) {
+         // repeated specifying
+         if (arrSize >= 0)
+            return CmdExec::errorOption(CMD_OPT_EXTRA, tokens[i]);
+
+         if (i + 1 >= toklen)
+            return CmdExec::errorOption(CMD_OPT_MISSING, tokens[i]);
+         // skip one field
+         i++;
+         if (!myStr2Int(tokens[i], arrSize) || arrSize <= 0)
+            return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[i]);
+      } else if (numObj < 0) {
+         if (!myStr2Int(tokens[i], numObj) || numObj <= 0)
+            return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[i]);
+      } else {
+         // mandatory arguments already encountered
+         return CmdExec::errorOption(CMD_OPT_EXTRA, tokens[i]);
+      }
+   }
+
+   // check mandatory option is correctly specified
+   if (numObj < 0)
+      return CmdExec::errorOption(CMD_OPT_MISSING, "");
+
+   //
+   //cout << "options: numObj=" << numObj << ", arrSize=" << arrSize << ". " << endl;
 
    return CMD_EXEC_DONE;
 }
