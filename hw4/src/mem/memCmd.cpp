@@ -43,7 +43,7 @@ MTResetCmd::exec(const string& option)
       return CMD_EXEC_ERROR;
    if (token.size()) {
       int b;
-      if (!myStr2Int(token, b) || b < toSizeT(sizeof(MemTestObj))) {
+      if (!myStr2Int(token, b) || b < int(toSizeT(sizeof(MemTestObj)))) {
          cerr << "Illegal block size (" << token << ")!!" << endl;
          return CmdExec::errorOption(CMD_OPT_ILLEGAL, token);
       }
