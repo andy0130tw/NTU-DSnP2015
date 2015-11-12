@@ -89,9 +89,6 @@ class MemBlock
    // 4. Return false if not enough memory
    bool getMem(size_t t, T*& ret) {
       // TODO
-      // ret = (T*)_ptr; _ptr += toSizeT(t);
-      // if (_ptr > _end) { _ptr = (char*)ret; return false; }
-      // return true;
       t = toSizeT(t);
       ret = (T*)_ptr;
       char* _ori = _ptr;
