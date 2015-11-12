@@ -232,8 +232,8 @@ MTDeleteCmd::exec(const string& option)
    } else if (inputFlag & DO_RANDOM) {
       if (!list_len) {
          cerr << "Size of " << term << " list is 0!!" << endl;
-         // fail
-         return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[optRand]);
+         // if empty, the illegal part is `-random` instead of the number
+         return CmdExec::errorOption(CMD_OPT_ILLEGAL, tokens[optRand - 1]);
       }
       // repeat
       if (inputFlag & DO_ARRAY) {
