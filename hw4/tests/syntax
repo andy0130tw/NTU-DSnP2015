@@ -1,0 +1,21 @@
+mtn
+mtn 0
+mtn -1
+mtn 1
+mtn -a 12 1
+mtn 12 1 -a
+mtn -a 1 -1
+mtn 1 -a 16
+mtn -a 1 -a 4
+
+mtd
+mtd 1
+mtd -i
+mtd -i 1
+mtd -i 1 -i
+mtd -r -2 -i
+mtd -r 3
+mtd -i -r 3
+mtd -i 1 -r 3
+
+q -f
