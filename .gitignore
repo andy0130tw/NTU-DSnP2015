@@ -34,3 +34,7 @@ tags
 # bundler by LeoMao
 bundler.py
 
+# Sublime Text
+*.sublime-*
+
+
