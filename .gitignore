@@ -19,8 +19,11 @@
 # Compiled Static libraries
 *.lai
 *.la
-*.a
-*.lib
+# These are used by the instructor,
+# which are (mostly) previous homework library for extending,
+# so do not ignore them!
+# *.a
+# *.lib
 
 # Executables
 *.exe
