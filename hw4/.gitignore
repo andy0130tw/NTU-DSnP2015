@@ -1,2 +1,6 @@
+# generated static library
+/lib/*.a
+!/lib/libcmd-*.a
+
 # dist file
 /bin

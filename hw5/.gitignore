@@ -1,0 +1,8 @@
+# generated static library
+/lib/*
+!/lib/libmem-*.h
+!/lib/libutil.h
+
+# dist files
+/bin/*
+
