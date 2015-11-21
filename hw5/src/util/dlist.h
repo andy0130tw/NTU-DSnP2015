@@ -155,8 +155,11 @@ public:
          if (ok) break;
          ok = true;
          for (iterator j = begin(); j != last_check; ++j) {
-            if (!(j._node->_data < j._node->_next->_data)) {
+            if (j._node->_next->_data < j._node->_data) {
                swap(j);
+               if (j == last_check._node->_next)
+                  ++last_check;
+               --j;
                ok = false;
             }
          }
@@ -169,12 +172,27 @@ private:
 
    // [OPTIONAL TODO] helper functions; called by public member functions
    // swap the element and the next one
-   void swap(iterator pos) const {
+   void swap(iterator& pos) const {
       assert(pos != end()._node->_prev);
       // swap the internal data; somehow dirty; super slow
-      T tmp = pos._node->_next->_data;
-      pos._node->_next->_data = pos._node->_data;
-      pos._node->_data = tmp;
+      // T tmp = pos._node->_next->_data;
+      // pos._node->_next->_data = pos._node->_data;
+      // pos._node->_data = tmp;
+
+      // seriously
+      // ... -> X -> A -> B -> Y -> ...
+      //             ^----^    swap these two...
+      DListNode<T>* a = pos._node;
+      DListNode<T>* x = a->_prev;
+      DListNode<T>* b = a->_next;
+      DListNode<T>* y = b->_next;
+
+      y->_prev = a;
+      a->_prev = b;
+      b->_prev = x;
+      a->_next = y;
+      b->_next = a;
+      x->_next = b;
    }
 };
 
