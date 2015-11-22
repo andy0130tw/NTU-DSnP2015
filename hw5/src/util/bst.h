@@ -143,7 +143,7 @@ public:
 
    // return false if nothing to erase
    bool erase(iterator pos) {
-      if (empty()) return false;
+      if (empty() || pos == _head) return false;
       BSTreeNode<T>* curr = pos._node;
       BSTreeNode<T>* prev = (pos - 1)._node;
       BSTreeNode<T>* next = (pos + 1)._node;
@@ -168,7 +168,6 @@ public:
          return erase(prev);
          // curr->hasLeftChild()
       }
-      return false;
    }
 
    // find and delete
