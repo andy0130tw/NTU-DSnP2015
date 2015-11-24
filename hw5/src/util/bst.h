@@ -19,6 +19,8 @@
 
 using namespace std;
 
+static const size_t MASK = -2; // 111....10
+
 template <class T> class BSTree;
 
 // BSTreeNode is supposed to be a private class. User don't need to see it.
@@ -33,29 +35,28 @@ class BSTreeNode
    friend class BSTree<T>;
    friend class BSTree<T>::iterator;
 
-   BSTreeNode(const T& d, BSTreeNode<T>* p = 0, BSTreeNode<T>* n = 0):
-      _data(d), _left(p), _right(n) {
+   BSTreeNode(const T& d, BSTreeNode<T>* l = 0, BSTreeNode<T>* r = 0):
+      _data(d), _left((size_t)l), _right((size_t)r) {
       setLeftFlag(true);
       setRightFlag(true);
    }
 
-   // these methods can be rewritten, taking adventage of bit slicing.
-   bool hasLeftChild  ()      { return !this->_lthr; }
-   bool hasRightChild ()      { return !this->_rthr; }
-   bool isLeaf() { return !hasLeftChild() && !hasRightChild(); }
-   BSTreeNode<T>* leftPtr  () { return this->_left;  }
-   BSTreeNode<T>* rightPtr () { return this->_right; }
-   BSTreeNode<T>* leftPtr  (BSTreeNode<T>* newptr) { return (this->_left = newptr);  }
-   BSTreeNode<T>* rightPtr (BSTreeNode<T>* newptr) { return (this->_right = newptr); }
-   void setLeftFlag  (bool v) { this->_lthr = v; }
-   void setRightFlag (bool v) { this->_rthr = v; }
+   // these methods can be rewritten, taking advantage of bit slicing.
+   bool isLeftThread  ()      { return  _left & 1; }
+   bool isRightThread ()      { return _right & 1; }
+   inline bool isLeaf()       { return isLeftThread() && isRightThread(); }
+   BSTreeNode<T>* leftPtr  () { return (BSTreeNode<T>*)(_left  & MASK); }
+   BSTreeNode<T>* rightPtr () { return (BSTreeNode<T>*)(_right & MASK); }
+   BSTreeNode<T>* leftPtr  (BSTreeNode<T>* newptr) { _left  = (size_t)newptr | isLeftThread();  return newptr; }
+   BSTreeNode<T>* rightPtr (BSTreeNode<T>* newptr) { _right = (size_t)newptr | isRightThread(); return newptr; }
+   void setLeftFlag  (bool v) { _left  ^= (-v ^ _left)  & 1; }
+   void setRightFlag (bool v) { _right ^= (-v ^ _right) & 1; }
 
    T               _data;
-   BSTreeNode<T>*  _left;
-   BSTreeNode<T>*  _right;
-   // true if the pointer is a `thread`, false if it is a child.
-   bool            _lthr;
-   bool            _rthr;
+   // BSTreeNode<T>*  _left;
+   // BSTreeNode<T>*  _right;
+   size_t          _left;
+   size_t          _right;
 };
 
 
@@ -102,21 +103,21 @@ public:
    private:
       BSTreeNode<T>* _node;
       void prev() {
-         if (!_node->hasLeftChild()) {
+         if (_node->isLeftThread()) {
             _node = _node->leftPtr();
          } else {
             BSTreeNode<T>* ptr = _node->leftPtr();
-            while (ptr->hasRightChild())
+            while (!ptr->isRightThread())
                ptr = ptr->rightPtr();
             _node = ptr;
          }
       }
       void next() {
-         if (!_node->hasRightChild()) {
+         if (_node->isRightThread()) {
             _node = _node->rightPtr();
          } else {
             BSTreeNode<T>* ptr = _node->rightPtr();
-            while (ptr->hasLeftChild())
+            while (!ptr->isLeftThread())
                ptr = ptr->leftPtr();
             _node = ptr;
          }
@@ -125,7 +126,7 @@ public:
 
    iterator begin() const {
       BSTreeNode<T>* ptr = _head->leftPtr();
-      while (ptr->hasLeftChild())
+      while (!ptr->isLeftThread())
          ptr = ptr->leftPtr();
       return ptr;
    }
@@ -163,18 +164,18 @@ public:
             curr->leftPtr()->rightPtr(next);
             curr->leftPtr()->setRightFlag(true);
          };
-         if (!next->hasLeftChild()) next->leftPtr(prev);
-         if (!prev->hasRightChild()) prev->rightPtr(next);
+         if (next->isLeftThread()) next->leftPtr(prev);
+         if (prev->isRightThread()) prev->rightPtr(next);
          delete curr;
          return true;
-      } else if (curr->hasRightChild()) {
+      } else if (!curr->isRightThread()) {
          // updating is too complicated; use replacing instead
          curr->_data = next->_data;
          return erase(next);
       } else {
          curr->_data = prev->_data;
          return erase(prev);
-         // curr->hasLeftChild()
+         // !curr->isLeftThread()
       }
    }
 
@@ -196,14 +197,14 @@ public:
       if (dir == 0) {
          BSTreeNode<T>* prev = (it-1)._node;
          BSTreeNode<T>* next = (it+1)._node;
-         if (!ptr->hasLeftChild()) {
+         if (ptr->isLeftThread()) {
             dir = -1;
-         } else if (!ptr->hasRightChild()) {
+         } else if (ptr->isRightThread()) {
             dir = 1;
-         } else if (!prev->hasRightChild()) {
+         } else if (prev->isRightThread()) {
             ptr = prev;
             dir = 1;
-         } else if (!next->hasLeftChild()) {
+         } else if (next->isLeftThread()) {
             ptr = next;
             dir = -1;
          }
@@ -258,11 +259,11 @@ private:
       while(1) {
          if (val < ptr->_data) {
             dir = -1;
-            if (!ptr->hasLeftChild()) break;
+            if (ptr->isLeftThread()) break;
             ptr = ptr->leftPtr();
          } else if (ptr->_data < val) {
             dir = 1;
-            if (!ptr->hasRightChild()) break;
+            if (ptr->isRightThread()) break;
             ptr = ptr->rightPtr();
          } else {
             dir = 0;
@@ -275,19 +276,20 @@ private:
 
    void purge(BSTreeNode<T>* ptr) {
       // recursively delete the subtree `ptr`.
-      if (ptr->hasLeftChild()) purge(ptr->leftPtr());
-      if (ptr->hasRightChild()) purge(ptr->rightPtr());
+      if (!ptr->isLeftThread()) purge(ptr->leftPtr());
+      if (!ptr->isRightThread()) purge(ptr->rightPtr());
       delete ptr;
    }
 
    // for debugging
-   // vector< BSTreeNode<T>* > _nodeList;
    void printNodes(ostream& os, BSTreeNode<T>* node) {
+#ifdef BST_VERBOSE
       static int depth = 0;
-      static string color_leaf  = "\033[1;33m\033[1;01m";  // orange bold
-      static string color_left  = "\033[1;32m";            // green
-      static string color_right  = "\033[1;34m";           // blue
-      static string color_reset = "\033[1;0m";
+      static const char* color_leaf  = "\033[1;33m\033[1;01m";  // orange bold
+      static const char* color_void  = "\033[1;90m";            // dark gray
+      static const char* color_left  = "\033[1;32m";            // green
+      static const char* color_right  = "\033[1;34m";           // blue
+      static const char* color_reset = "\033[1;0m";
 
       if (node->isLeaf()) os << color_leaf;
       os << setw(DEBUG_PRINT_WIDTH) << left << node->_data;
@@ -298,38 +300,21 @@ private:
 
       os << color_left;
       os << setw(DEBUG_INDENT_WIDTH) << right << "/";
-      if (node->hasLeftChild()) printNodes(os, node->leftPtr());
-      else os << "[ 0 ]";
+      if (!node->isLeftThread()) printNodes(os, node->leftPtr());
+      else os << color_void << "[ 0 ]";
       os << color_reset;
 
       os << endl;
 
       os << color_right;
       os << setw(depth * (DEBUG_INDENT_WIDTH + DEBUG_PRINT_WIDTH)) << right << "\\";
-      if (node->hasRightChild()) printNodes(os, node->rightPtr());
-      else os << "[ 0 ]";
+      if (node->!isRightThread()) printNodes(os, node->rightPtr());
+      else os << color_void << "[ 0 ]";
       os << color_reset;
 
       depth--;
+#endif  // BST_VERBOSE
    }
 };
-
-/*
-// backup for BSTree::print
-// cout << "Node\tLeft\tTL Right\tTR" << endl;
-// for (iterator it = begin(); it != end(); ++it) {
-// for (size_t i = 0, n = _nodeList.size(); i < n; i++) {
-   // cout         << it._node->_data
-   //      << "\t" << it._node->_left->_data
-   //      << "\t" << it._node->_right->_data
-   //      << "  " << it._node->_lthr
-   //      << "\t" << it._node->_rthr << endl;
-   // cout         << _nodeList[i]->_data
-   //      << "\t" << _nodeList[i]->_left->_data
-   //      << "\t" << _nodeList[i]->_lthr
-   //      << "  " << _nodeList[i]->_right->_data
-   //      << "\t" << _nodeList[i]->_rthr << endl;
-// }
-*/
 
 #endif // BST_H
