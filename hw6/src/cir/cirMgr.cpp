@@ -323,10 +323,7 @@ CirMgr::readCircuit(const string& fileName)
                      err = NUM_TOO_SMALL;
                      break;
                   }
-
-                  // _gates.resize(_maxNum, 0);
                   _gates[0] = new ConstGate(); // constant false
-
                   exp_sep = newline;
                }
                break;
@@ -355,10 +352,7 @@ CirMgr::readCircuit(const string& fileName)
                   err = REDEF_GATE;
                   break;
                }
-               cerr << "=== PI === " << buf_int/2 << endl;
-               // gates[buf_int / 2] =
                cirMgr->addPI(lineNo, buf_int/2);
-               // _piList.push_back(new PiGate());
                defCount++;
                break;
             case latch:    // 2 inputs; _even_ _uint_; omitting here
@@ -376,15 +370,10 @@ CirMgr::readCircuit(const string& fileName)
                   err = NUM_TOO_BIG;
                   break;
                }
-               cerr << "=== PO === " << buf_int/2 << " " << buf_int%2 << endl;
-               //buf_int
-               //gates[buf_int / 2] =
                if (!cirMgr->getGate(buf_int/2)) {
                   CirGate* src = cirMgr->addUndef(buf_int/2);
                   cirMgr->addPO(lineNo, src, buf_int%2);
                }
-
-               // _poList.push_back(new AigGate());
                defCount++;
                break;
             case andGate:  // 3 inputs; _even_ _uint_ _uint_
@@ -394,7 +383,6 @@ CirMgr::readCircuit(const string& fileName)
                   defTokens[2] = buf_int;
                   defCount++;
                   tokenCnt = -1;
-                  cerr << "=== AIG === " << defTokens[0] << " " << defTokens[1] << " " << defTokens[2] << endl;
                   CirGate* fan1 = cirMgr->getGate(defTokens[1] / 2);
                   CirGate* fan2 = cirMgr->getGate(defTokens[2] / 2);
                   if (!fan1) fan1 = cirMgr->addUndef(defTokens[1] / 2);
@@ -438,7 +426,6 @@ CirMgr::readCircuit(const string& fileName)
                   exp_sep = space;
                   exp_type = str_line;
                } else {
-                  //cerr << "=== SYMBOL === " << symbol.id << " " << symbol.type << endl;
                   GateList& gg = (sym.type == 'i' ? _piList : _poList);
                   gg[sym.id]->_name = buf_str;
                   defCount++;
