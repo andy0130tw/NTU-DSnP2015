@@ -20,9 +20,6 @@ using namespace std;
 extern CirMgr *cirMgr;
 
 // TODO: Implement memeber functions for class(es) in cirGate.h
-
-unsigned CirGate::_global_ref = 0;
-
 /**************************************/
 /*   class CirGate member functions   */
 /**************************************/

@@ -28,7 +28,7 @@ class CirGate
 {
 public:
    CirGate(GateType t = UNDEF_GATE, unsigned gid = 0, int ln = 0):
-      _type(t), _id(gid), _lineno(ln) {}
+      _type(t), _id(gid), _ref(getGlobalRef()), _lineno(ln) {}
    virtual ~CirGate() {}
 
    GateType _type;
@@ -56,9 +56,9 @@ public:
 
    virtual bool getInv(size_t i) const { return false; }
 
-   static void clearMark() { _global_ref++; }
-   void mark() { _ref = _global_ref; }
-   bool isMarked() const { return (_ref == _global_ref); }
+   static void clearMark() { getGlobalRef()++; }
+   void mark() { _ref = getGlobalRef(); }
+   bool isMarked() const { return (_ref == getGlobalRef()); }
 
    // for making DFS list
    void traversal(GateList* l);
@@ -76,7 +76,10 @@ private:
    unsigned _ref;
    int _lineno;
 
-   static unsigned _global_ref;
+   static unsigned& getGlobalRef() {
+      static unsigned _global_ref = 0;
+      return _global_ref;
+   }
 
 protected:
 };
