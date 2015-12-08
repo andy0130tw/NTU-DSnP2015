@@ -40,12 +40,12 @@ public:
    // Basic access methods
    string getTypeStr() const {
       switch (_type) {
-         case PI_GATE: return "PI";
-         case PO_GATE: return "PO";
-         case AIG_GATE: return "AIG";
+         case PI_GATE:    return "PI";
+         case PO_GATE:    return "PO";
+         case AIG_GATE:   return "AIG";
          case CONST_GATE: return "CONST0";
          case UNDEF_GATE: return "UNDEF";
-         default: return "";
+         default:         return "";
       }
    }
    unsigned getLineNo() const { return _lineno; }
@@ -61,7 +61,7 @@ public:
    bool isMarked() const { return (_ref == _global_ref); }
 
    // for making DFS list
-   void traversal(GateList& l);
+   void traversal(GateList* l);
 
    // Printing functions
    virtual void printGate() const = 0;

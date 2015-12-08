@@ -46,6 +46,9 @@ public:
       return it->second;
    }
 
+   // DFS!!!
+   void dfs(GateList*) const;
+
    // Member functions about circuit construction
    bool readCircuit(const string&);
 
