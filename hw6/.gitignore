@@ -1,0 +1,7 @@
+# generated static library
+/lib/*
+!/lib/libcmd*.a
+
+# dist files
+/bin/*
+
