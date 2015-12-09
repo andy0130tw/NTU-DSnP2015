@@ -402,7 +402,7 @@ CirMgr::readCircuit(const string& fileName)
          checkLiteralID(this, gid, true);
 
          addPI(lineNo+1, gid / 2);
-         cerr << "=== PI === " << gid/2 << endl;
+         // cerr << "=== PI === " << gid/2 << endl;
       }
 
       // ========== LATCH  ========== (omitted)
