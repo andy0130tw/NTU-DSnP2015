@@ -423,8 +423,10 @@ CirMgr::readCircuit(const string& fileName)
          errInt = gid;
          checkLiteralID(this, gid, false, false);
 
-         CirGate* src = addUndef(gid / 2);
-         addPO(lineNo+1, src, gid%2);
+         if (!getGate(gid/2)) {
+            CirGate* src = addUndef(gid / 2);
+            addPO(lineNo+1, src, gid%2);
+         }
          // cerr << "=== PO === " << gid/2 << " " << gid%2 << endl;
       }
 
