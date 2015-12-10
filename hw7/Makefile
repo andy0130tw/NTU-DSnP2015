@@ -1,4 +1,4 @@
-REFPKGS  = cmd 
+REFPKGS  = cmd
 SRCPKGS  = util task
 LIBPKGS  = $(REFPKGS) $(SRCPKGS)
 MAIN     = main
@@ -14,14 +14,14 @@ libs:
 	@for pkg in $(SRCPKGS); \
 	do \
 		echo "Checking $$pkg..."; \
-		cd src/$$pkg; make --no-print-directory PKGNAME=$$pkg; \
+		cd src/$$pkg; make -f make.$$pkg --no-print-directory PKGNAME=$$pkg; \
 		cd ../..; \
 	done
 
 main:
 	@echo "Checking $(MAIN)..."
 	@cd src/$(MAIN); \
-		make --no-print-directory INCLIB="$(LIBS)" EXEC=$(EXEC);
+		make -f make.$(MAIN) --no-print-directory INCLIB="$(LIBS)" EXEC=$(EXEC);
 	@ln -fs bin/$(EXEC) .
 #	@strip bin/$(EXEC)
 
@@ -29,11 +29,11 @@ clean:
 	@for pkg in $(SRCPKGS); \
 	do \
 		echo "Cleaning $$pkg..."; \
-		cd src/$$pkg; make --no-print-directory PKGNAME=$$pkg clean; \
+		cd src/$$pkg; make -f make.$$pkg --no-print-directory PKGNAME=$$pkg clean; \
                 cd ../..; \
 	done
 	@echo "Cleaning $(MAIN)..."
-	@cd src/$(MAIN); make --no-print-directory clean
+	@cd src/$(MAIN); make -f make.$(MAIN) --no-print-directory clean
 	@echo "Removing $(SRCLIBS)..."
 	@cd lib; rm -f $(SRCLIBS)
 	@echo "Removing $(EXEC)..."
