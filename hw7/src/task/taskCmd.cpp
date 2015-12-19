@@ -121,7 +121,7 @@ TaskNewCmd::exec(const string& option)
       cout << "... " << numMachines << " new task nodes are added." << endl;
    }
    else { // doName
-      assert(doName); 
+      assert(doName);
       if (!taskMgr->add(name, load))
          cerr << "Error: Task node (" << name << ") already exists.\n";
    }

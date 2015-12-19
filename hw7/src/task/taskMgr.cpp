@@ -18,7 +18,7 @@ using namespace std;
 TaskMgr *taskMgr = 0;
 
 // BEGIN: DO NOT CHANGE THIS PART
-TaskNode::TaskNode() 
+TaskNode::TaskNode()
 {
    _name.resize(NAME_LEN);
    for (int i = 0; i < NAME_LEN; ++i)
@@ -27,7 +27,7 @@ TaskNode::TaskNode()
 }
 
 size_t
-TaskNode::operator () () const 
+TaskNode::operator () () const
 {
    size_t k = 0, n = (_name.length() <= 5)? _name.length(): 5;
    for (size_t i = 0; i < n; ++i)
@@ -45,7 +45,7 @@ TaskMgr::TaskMgr(size_t nMachines)
 
 void
 TaskMgr::remove(size_t nMachines)
-{        
+{
    for (size_t i = 0, n = nMachines; i < n; ++i) {
       size_t j = rnGen(size());
       assert(_taskHash.remove(_taskHeap[j]));
@@ -65,6 +65,14 @@ TaskMgr::remove(const string& s)
 }
 // END: DO NOT CHANGE THIS PART
 
+// though "DO NOT CHANGE THIS PART", it is worth mentioning that
+// the spec says,
+//
+// ... Remove task node(s) from the task manager and print out “Task
+//  node removed: (name, load)” for each removed one. ...
+//
+// however, the reference code did not implement this.
+
 // Exactly nMachines (nodes) will be added to Hash and Heap
 // Note: a new task node can be created by the default constructor
 //       i.e. TaskNode newNode;
@@ -72,6 +80,12 @@ void
 TaskMgr::add(size_t nMachines)
 {
    // TODO...
+   while (nMachines--) {
+      TaskNode newNode;
+      _taskHeap.insert(newNode);
+      _taskHash.insert(newNode);
+      cout << "Task node inserted: " << newNode << endl;
+   }
 }
 
 // return true if TaskNode is successfully inserted
@@ -80,7 +94,12 @@ bool
 TaskMgr::add(const string& s, size_t l)
 {
    // TODO...
-   return false;
+   TaskNode newNode(s, l);
+   if (_taskHash.check(newNode)) return false;
+   _taskHeap.insert(newNode);
+   _taskHash.insert(newNode);
+   cout << "Task node inserted: " << newNode << endl;
+   return true;
 }
 
 // Assign the min task node with 'l' extra load.
@@ -93,12 +112,21 @@ bool
 TaskMgr::assign(size_t l)
 {
    // TODO...
+   if (empty())
+      return false;
+   // bad style... discards const qualifier
+   // C++ equivalent: *const_cast<TaskNode*>(&_taskHeap.min()) += l;
+   TaskNode* t = (TaskNode*) &_taskHeap.min();
+   *t += l;
+   // let hash update first because the position may change
+   _taskHash.update(*t);
+   _taskHeap.update(0);
    return true;
 }
 
 // WARNING: DO NOT CHANGE THESE TWO FUNCTIONS!!
 void
-TaskMgr::printAllHash() const 
+TaskMgr::printAllHash() const
 {
    HashSet<TaskNode>::iterator hi = _taskHash.begin();
    for (; hi != _taskHash.end(); ++hi)
