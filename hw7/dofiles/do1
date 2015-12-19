@@ -7,3 +7,4 @@ taska 1000
 taskq -heap
 taska 1000 -r 10
 taskq -heap
+q -f
