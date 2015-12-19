@@ -70,26 +70,8 @@ public:
       _data.erase(_data.end() - 1);
 
       // maintain heap structure
-      update(i);
-   }
-
-
-   // [custom]
-   // treat _data[i] as the root of a heap,
-   // update its position properly by sinking it down
-   void update(size_t i) {
-      size_t s = size();
-
       // sink it until value is smaller than both its children
-      // while (NUM_R(i) < s && (LEFT_CHILD(i) < CURRENT(i) || RIGHT_CHILD(i) < CURRENT(i))) {
-      //    if (LEFT_CHILD(i) < RIGHT_CHILD(i)) {
-      //       swap(CURRENT(i), LEFT_CHILD(i));
-      //       i = NUM_L(i);
-      //    } else {
-      //       swap(CURRENT(i), RIGHT_CHILD(i));
-      //       i = NUM_R(i);
-      //    }
-      // }
+      size_t s = size();
       while (NUM_R(i) < s) {
          if (LEFT_CHILD(i) < CURRENT(i) && LEFT_CHILD(i) < RIGHT_CHILD(i)) {
             swap(CURRENT(i), LEFT_CHILD(i));
