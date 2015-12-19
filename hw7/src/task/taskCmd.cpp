@@ -239,7 +239,7 @@ TaskQueryCmd::exec(const string& option)
 void
 TaskQueryCmd::usage(ostream& os) const
 {
-   os << "Usage: TASKQuery <(string name) | -All | -MINimum >" << endl;
+   os << "Usage: TASKQuery <(string name) | -HAsh | -HEap | -MINimum >" << endl;
 }
 
 void
