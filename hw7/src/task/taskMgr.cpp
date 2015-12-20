@@ -114,13 +114,12 @@ TaskMgr::assign(size_t l)
    // TODO...
    if (empty())
       return false;
-   // bad style... discards const qualifier
-   // C++ equivalent: *const_cast<TaskNode*>(&_taskHeap.min()) += l;
-   TaskNode* t = (TaskNode*) &_taskHeap.min();
-   *t += l;
-   // let hash update first because the position may change
-   _taskHash.update(*t);
-   _taskHeap.update(0);
+
+   TaskNode t = _taskHeap.min();
+   t += l;
+   _taskHeap.insert(t);
+   _taskHeap.delMin();
+   _taskHash.update(t);
    return true;
 }
 

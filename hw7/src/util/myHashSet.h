@@ -67,14 +67,13 @@ public:
             _key++;
             _pos = 0;
          }
-         #include<iostream>
          return *this;
       }
       iterator operator ++ (int) { iterator it = *this; ++this; return it; }
       iterator& operator -- () {
          _pos--;
          while (_key > 0) {
-            // if it is 0, decresement will result in underflow
+            // if it is 0, decrement will result in underflow
             _key--;
             HashBucket* bucket = &(*_hashSet)[_key];
             if (bucket->size()) {
@@ -88,7 +87,12 @@ public:
          return *this;
       }
       iterator operator -- (int) { iterator it = *this; ++this; return it; }
-      iterator& operator = (iterator i) { return false; }
+      iterator& operator = (iterator i) {
+         _hashSet = i._hashSet;
+         _key = i._key;
+         _pos = i._pos;
+         return this;
+      }
       bool operator == (const iterator& i) {
          if (_hashSet != i._hashSet) return false;
          if (_key != i._key) return false;
@@ -103,7 +107,7 @@ public:
       size_t               _pos;
    };
 
-   void init(size_t b) { _numBuckets = b; _buckets = new vector<Data>[b]; }
+   void init(size_t b) { _numBuckets = b; _buckets = new HashBucket[b]; }
    void reset() {
       _numBuckets = 0;
       if (_buckets) { delete [] _buckets; _buckets = 0; }
@@ -113,8 +117,8 @@ public:
    }
    size_t numBuckets() const { return _numBuckets; }
 
-   vector<Data>& operator [] (size_t i) { return _buckets[i]; }
-   const vector<Data>& operator [](size_t i) const { return _buckets[i]; }
+   HashBucket& operator [] (size_t i) { return _buckets[i]; }
+   const HashBucket& operator [](size_t i) const { return _buckets[i]; }
 
    // TODO: implement these functions
    //
@@ -178,7 +182,7 @@ public:
    // return fasle otherwise (i.e. nothing is removed)
    bool remove(const Data& d) {
       HashBucket* bucket = &_buckets[bucketNum(d)];
-      typename vector<Data>::iterator it = bucket->begin();
+      typename HashBucket::iterator it = bucket->begin();
       for (; it != bucket->end(); ++it)
          if ((*it) == d) {
             bucket->erase(it);
@@ -200,7 +204,7 @@ private:
    // if insert is true, data is inserted (but null is still returned)
    Data* get(const Data& d, bool insert = false) const {
       HashBucket* bucket = &_buckets[bucketNum(d)];
-      typename vector<Data>::iterator it = bucket->begin();
+      typename HashBucket::iterator it = bucket->begin();
       for (; it != bucket->end(); ++it)
          if ((*it) == d)
             return &(*it);
