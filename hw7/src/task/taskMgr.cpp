@@ -51,6 +51,9 @@ TaskMgr::remove(size_t nMachines)
       assert(_taskHash.remove(_taskHeap[j]));
       _taskHeap.delData(j);
    }
+   #ifdef REF_COMPARSION
+   for (int i = 0; i < 12; i++) rnGen(1);
+   #endif  // REF_COMPARSION
 }
 
 // return true if TaskNode is successfully removed
@@ -115,7 +118,11 @@ TaskMgr::assign(size_t l)
    if (empty())
       return false;
 
-   TaskNode t = _taskHeap.min();
+   #ifdef REF_COMPARSION
+   for (int i = 0; i < 6; i++) rnGen(1);
+   #endif  // REF_COMPARSION
+
+   TaskNode t(_taskHeap.min());
    t += l;
    _taskHeap.insert(t);
    _taskHeap.delMin();
