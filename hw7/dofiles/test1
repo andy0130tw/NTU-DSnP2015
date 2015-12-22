@@ -1,0 +1,16 @@
+taski 2000
+taskn -r 1000
+taskn -r 1000
+taskr -r 1000
+taskq -min
+taskn -r 1000
+taskq -min
+taskr -r 1000
+taskq -min
+taskn -r 1000
+taskq -min
+taskr -r 1000
+taskq -min
+taski 20000
+taskn -r 20000
+q -f
