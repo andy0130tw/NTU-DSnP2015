@@ -98,9 +98,8 @@ TaskMgr::add(const string& s, size_t l)
 {
    // TODO...
    TaskNode newNode(s, l);
-   if (_taskHash.check(newNode)) return false;
+   if (!_taskHash.insert(newNode)) return false;
    _taskHeap.insert(newNode);
-   _taskHash.insert(newNode);
    cout << "Task node inserted: " << newNode << endl;
    return true;
 }

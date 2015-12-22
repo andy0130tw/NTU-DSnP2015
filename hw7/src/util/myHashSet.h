@@ -174,6 +174,12 @@ public:
    // return false is d is already in the hash ==> will not insert
    bool insert(const Data& d) {
       size_t key = bucketNum(d);
+      HashBucket* bucket = &_buckets[key];
+      typename HashBucket::iterator it = bucket->begin();
+      for (; it != bucket->end(); ++it)
+         if ((*it) == d)
+            return false;
+
       _buckets[key].push_back(d);
       return true;
    }
