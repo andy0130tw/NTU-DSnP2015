@@ -314,12 +314,77 @@ static void parseTokens(istream& f, vector< vector<string>* >& tokenList) {
 /**************************************************************/
 /*   class CirMgr member functions for circuit construction   */
 /**************************************************************/
+GateList& CirMgr::getDfsList() const {
+   if (!_dfsList_clean) {
+      _dfsList.clear();
+      dfs(&_dfsList);
+      _dfsList_clean = true;
+   }
+   return _dfsList;
+}
+
 void CirMgr::dfs(GateList* l = 0) const {
    // do dfs and leave the mark for tracing
    GateList::const_iterator it = _poList.begin();
    CirGate::clearMark();
    for (; it != _poList.end(); ++it)
       (*it)->traversal(l);
+}
+
+CirGate* CirMgr::addPI(int lineno, unsigned lid) {
+      unsigned gid = lid / 2;
+      CirGate* pi = new InputGate(gid, lineno);
+      _piList.push_back(pi);
+      _gates[gid] = pi;
+      return pi;
+   }
+
+CirGate* CirMgr::addPO(int lineno, unsigned lid) {
+   unsigned gid = _maxNum + _poList.size() + 1;
+   OutputGate* po = new OutputGate(gid, lineno);
+   _poList.push_back(po);
+   po->_fanin[0] = lid;
+   po->_faninCount = 1;
+   return (_gates[gid] = po);
+}
+
+CirGate* CirMgr::addAIG(int lineno, unsigned lid, unsigned fin1, unsigned fin2) {
+   unsigned gid = lid / 2;
+   AigGate* aig = new AigGate(gid, lineno);
+   aig->_fanin[0] = fin1;
+   aig->_fanin[1] = fin2;
+   aig->_faninCount = 2;
+   return (_gates[gid] = aig);
+}
+
+CirGate* CirMgr::addUndef(unsigned gid) {
+   UndefGate* undef = new UndefGate(gid);
+   return (_gates[gid] = undef);
+}
+
+void CirMgr::initialize() {
+   CirGateV pi;
+   bool inv;
+   CirGate* self;
+   CirGate* target;
+
+   GateMap::const_iterator it = _gates.begin();
+   for (; it != _gates.end(); ++it) {
+      self = (*it).second;
+      // cout << "Gate #" << self->getID() << ": " << self->getTypeStr() << endl;
+
+      for (size_t i = 0, n = self->_faninCount; i < n; i++) {
+         pi = self->_fanin[i] / 2;
+         inv = self->_fanin[i] % 2;
+         target = getGate(pi);
+         if (!target) target = addUndef((unsigned)pi);
+         // cout << "  * PI: " << pi << " " << inv << " " << target->getTypeStr() << endl;
+         target->addFanout((CirGateV)self | inv);
+         // need not set inv because it was set along (and thus shared with) literal ID
+         self->setFanin(i, target);
+      }
+
+   }
 }
 
 bool
@@ -562,9 +627,8 @@ void
 CirMgr::printNetlist() const
 {
    cout << endl;
-   // to pass the compilation
-   GateList _dfsList;
-   dfs(&_dfsList);
+
+   GateList& _dfsList = getDfsList();
 
    for (unsigned i = 0, n = _dfsList.size(); i < n; ++i) {
       if (!_dfsList[i]) continue;

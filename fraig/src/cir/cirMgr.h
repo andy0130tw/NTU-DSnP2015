@@ -45,6 +45,7 @@ public:
    }
 
    // DFS!!!
+   GateList& getDfsList() const;
    void dfs(GateList*) const;
 
    // Member functions about circuit construction
@@ -74,74 +75,18 @@ public:
    void writeAag(ostream&) const;
    void writeGate(ostream&, CirGate*) const;
 
+   CirGate* addPI(int, unsigned);
+   CirGate* addPO(int, unsigned);
+   CirGate* addAIG(int, unsigned, unsigned, unsigned);
+   CirGate* addUndef(unsigned);
+
+   void initialize();
+
    unsigned int _maxNum;
    unsigned int _inputCount;
    unsigned int _latchCount;
    unsigned int _outputCount;
    unsigned int _andGateCount;
-
-   void initialize() {
-      CirGateV pi;
-      bool inv;
-      CirGate* self;
-      CirGate* target;
-
-      GateMap::const_iterator it = _gates.begin();
-      for (; it != _gates.end(); ++it) {
-         self = (*it).second;
-         // cout << "Gate #" << self->getID() << ": " << self->getTypeStr() << endl;
-
-         for (size_t i = 0, n = self->_faninCount; i < n; i++) {
-            pi = self->_fanin[i] / 2;
-            inv = self->_fanin[i] % 2;
-            target = getGate(pi);
-            if (!target) target = addUndef((unsigned)pi);
-            // cout << "  * PI: " << pi << " " << inv << " " << target->getTypeStr() << endl;
-            target->addFanout((CirGateV)self | inv);
-            // need not set inv because it was set along (and thus shared with) literal ID
-            self->setFanin(i, target);
-         }
-
-      }
-   }
-
-   CirGate* addPI(int lineno, unsigned lid) {
-      unsigned gid = lid / 2;
-      CirGate* pi = new InputGate(gid, lineno);
-      _piList.push_back(pi);
-      _gates[gid] = pi;
-      return pi;
-   }
-
-   CirGate* addPO(int lineno, unsigned lid) {
-      unsigned gid = _maxNum + _poList.size() + 1;
-      OutputGate* po = new OutputGate(gid, lineno);
-      _poList.push_back(po);
-      po->_fanin[0] = lid;
-      po->_faninCount = 1;
-      return (_gates[gid] = po);
-   }
-
-   CirGate* addAIG(int lineno, unsigned lid, unsigned fin1, unsigned fin2) {
-      unsigned gid = lid / 2;
-      AigGate* aig = new AigGate(gid, lineno);
-      aig->_fanin[0] = fin1;
-      aig->_fanin[1] = fin2;
-      aig->_faninCount = 2;
-      return (_gates[gid] = aig);
-   }
-
-   CirGate* addUndef(unsigned gid) {
-      UndefGate* undef = new UndefGate(gid);
-      return (_gates[gid] = undef);
-   }
-
-   bool connect(CirGate* po, CirGate* pi, bool inv) {
-      // if (!pi || !po) return false;
-      // if (!pi->addFanin(po, inv)) return false;
-      // po->addFanout(pi);
-      return true;
-   }
 
 private:
    ofstream           *_simLog;
@@ -150,6 +95,8 @@ private:
    GateList           _totalList;
 
    GateMap            _gates;
+   mutable GateList   _dfsList;
+   mutable bool       _dfsList_clean;
 };
 
 #endif // CIR_MGR_H
