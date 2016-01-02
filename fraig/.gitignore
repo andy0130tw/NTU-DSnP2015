@@ -6,6 +6,9 @@
 /tests.fraig/pattern.12
 /tests.fraig/pattern.13
 
+# temporary dofiles
+/tests.fraig/do.*
+
 # dist files
 /bin/*
 
