@@ -10,6 +10,7 @@
 #define CIR_DEF_H
 
 #include <vector>
+#include <map>
 #include "myHashMap.h"
 
 using namespace std;
@@ -24,6 +25,7 @@ typedef size_t                     CirGateV;
 typedef vector<CirGate*>           GateList;
 typedef vector<CirGateV>           GateVList;
 typedef vector<unsigned>           IdList;
+typedef map<unsigned, CirGate*>    GateMap;
 
 enum GateType
 {

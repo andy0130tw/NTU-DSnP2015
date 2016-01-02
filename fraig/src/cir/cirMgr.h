@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <map>
 #include <fstream>
 #include <iostream>
 
@@ -24,12 +23,10 @@ using namespace std;
 
 extern CirMgr *cirMgr;
 
-typedef map<unsigned, CirGate*> GateMap;
-
 class CirMgr
 {
 public:
-   CirMgr() {}
+   CirMgr(): _dfsList_clean(false) {}
    ~CirMgr() {
       for (GateMap::const_iterator it = _gates.begin(); it != _gates.end(); ++it) {
          delete it->second;
@@ -46,7 +43,7 @@ public:
 
    // DFS!!!
    GateList& getDfsList() const;
-   void dfs(GateList*) const;
+   void dfs(GateList* l = 0) const;
 
    // Member functions about circuit construction
    bool readCircuit(const string&);
@@ -96,7 +93,12 @@ private:
 
    GateMap            _gates;
    mutable GateList   _dfsList;
+   // mutable GateList   _unusedList;
    mutable bool       _dfsList_clean;
+
+   #ifdef CHECK_INTEGRITY
+   bool checkIntegrity() const;
+   #endif  // CHECK_INTEGRITY
 };
 
 #endif // CIR_MGR_H

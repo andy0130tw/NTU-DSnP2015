@@ -72,18 +72,22 @@ public:
    virtual bool addFanin(CirGate* gate, bool inv) { return addFanin((CirGateV)gate | inv); }
    virtual bool addFanout(CirGate* gate, bool inv) { return addFanout((CirGateV)gate | inv); }
 
-
    void replaceFanin(CirGate* a, CirGateV b) {
-      if (getFanin(0) == a) {
-         setFanin(0, b);
-      }
-      if (getFanin(1) == a) {
-         setFanin(1, b);
+      for (size_t i = 0; i < _faninCount; i++) {
+         if (getFanin(i) == a) {
+            setFanin(i, b);
+         }
       }
    }
 
-   void replaceFanout(CirGate* a, CirGateV b) {
-
+   bool eraseFanout(CirGate* f) {
+      for (GateVList::iterator it = _fanoutList.begin(); it != _fanoutList.end(); ++it) {
+         if (!(((*it) ^ (CirGateV)f) >> 1)) {
+            _fanoutList.erase(it);
+            return true;
+         }
+      }
+      return false;
    }
 
    static void const clearMark() { _global_ref++; }
@@ -132,7 +136,7 @@ public:
       cout << getFanin(1)->getID();
    }
 
-   bool isAig() const { return false; }
+   bool isAig() const { return true; }
 
 private:
 };

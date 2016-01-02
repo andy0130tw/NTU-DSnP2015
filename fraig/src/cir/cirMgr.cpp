@@ -323,7 +323,7 @@ GateList& CirMgr::getDfsList() const {
    return _dfsList;
 }
 
-void CirMgr::dfs(GateList* l = 0) const {
+void CirMgr::dfs(GateList* l) const {
    // do dfs and leave the mark for tracing
    GateList::const_iterator it = _poList.begin();
    CirGate::clearMark();
