@@ -1,14 +1,14 @@
-#! /bin/csh
-if ($#argv == 0) then
+#! /bin/sh
+if [ $# = 0 ]; then
   echo "Missing aag file. Using -- run.rsim xx (for rsimxx.aag)"; exit 1
-endif
+fi
 
-set design=sim$1.aag
-if (! -e $design) then
+design=sim$1.aag
+if [ ! -f $design ]; then
    echo "$design does not exists" ; exit 1
-endif
+fi
 
-set dofile=do.rsim
+dofile=do.rsim
 rm -f $dofile
 echo "cirr $design" > $dofile
 echo "cirp" >> $dofile

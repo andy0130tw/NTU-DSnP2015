@@ -1,12 +1,12 @@
-#! /bin/csh
-if ($#argv == 0) then
+#! /bin/bash
+if [ $# = 0 ]; then
   echo "Missing aag file. Using -- run.fsim xx (for fsimxx.aag)"; exit 1
-endif
+fi
 
 set design=sim$1.aag
-if (! -e $design) then
+if [ ! -f $design ]; then
    echo "$design does not exists" ; exit 1
-endif
+fi
 
 set dofile=do.fsim
 rm -f $dofile

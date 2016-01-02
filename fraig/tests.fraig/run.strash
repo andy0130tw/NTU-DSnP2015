@@ -1,14 +1,14 @@
-#! /bin/csh
-if ($#argv == 0) then
+#! /bin/sh
+if [ $# = 0 ]; then
   echo "Missing aag file. Using -- run.strash xx (for strashXX.aag)"; exit 1
-endif
+fi
 
-set design=strash$1.aag
-if (! -e $design) then
+design=strash$1.aag
+if [ ! -f $design ]; then
    echo "$design does not exists" ; exit 1
-endif
+fi
 
-set dofile=do.strash
+dofile=do.strash
 rm -f $dofile
 echo "cirr $design" > $dofile
 echo "cirp" >> $dofile

@@ -1,3 +1,4 @@
+#! /bin/sh
 run.fraig 01
 run.fraig 02
 run.fraig 03
