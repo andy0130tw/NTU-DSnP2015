@@ -147,167 +147,196 @@ parseError(CirParseError err)
 }
 
 // intended for parsing
-enum TokenType { start, num, str, chr, space, newline, until_end, none };
-enum ParseState { initial, header, pipo, symbol, comment, dummy };
+enum ParseState {
+   STATE_INITIAL,
+   STATE_HEADER,
+   STATE_PI,
+   STATE_PO,
+   STATE_AIG,
+   STATE_SYMBOL,
+   STATE_FINISHED,
 
-static bool isDigit(char x) {
-   return (x >= '0' && x <= '9');
+   STATE_DUMMY
+};
+static ParseState state = STATE_DUMMY;
+
+static inline bool isTerminatingChar(char c) {
+   return (c == ' ' || c == '\n');
 }
 
-static unsigned toUint(string& x) {
-   for (size_t i = 0, n = x.size(); i < n; i++) {
-      if (!(x[i] >= '0' && x[i] <= '9')) {
-         errMsg = "number";
-         throw ILLEGAL_NUM;
-      }
+static inline bool isDigit(char c) {
+   return (c >= '0' && c <= '9');
+}
+
+// due to some errors are universal but state-dependent,
+// when reading or consuming fails, this function is called
+// to make an approperiate error message based on internal state
+static void emitStatefulError(CirParseError pe) {
+   static const string headerErrMsg[5] = { "vars", "PIs", "Latches", "POs", "AIGs" };
+   bool doSuffix = false;
+   switch (state) {
+      case STATE_HEADER: errMsg = "number of " + headerErrMsg[errInt]; break;
+      case STATE_PI: errMsg = "PI"; doSuffix = true; break;
+      case STATE_PO: errMsg = "PO"; doSuffix = true; break;
+      case STATE_AIG: errMsg = "AIG"; doSuffix = true; break;
+      case STATE_SYMBOL:
+         if (pe == ILLEGAL_NUM)
+            errMsg = "symbol index";
+         else if (pe == MISSING_IDENTIFIER)
+            errMsg = "symbolic name";
+         break;
+      default: break;
    }
-   return atoi(x.c_str());
+   if (doSuffix) {
+      if (pe == MISSING_NUM)
+         errMsg += " literal ID";
+   }
+   throw pe;
+}
+
+// maintains colNo
+// ### exceptions: ILLEGAL_WSPACE ###
+static char readChar(istream& f) {
+   char ch = f.get();
+   if (ch < 0) return ch; // EOF; do not raise error
+   if (ch < 32 && ch != '\n') {
+      errInt = (int)ch;
+      throw ILLEGAL_WSPACE;
+   }
+   colNo++;
+   return ch;
+}
+
+// unget a character from the stream
+// update colNo accordingly (sorry, only within a line)
+static bool retreatChar(istream& f) {
+   if (colNo == 0) return false;
+   colNo--;
+   f.unget();
+   return true;
+}
+
+// count colNo backward BASED ON THE INTERNAL BUFFER
+// dangerous!! retreat ASAP or it may cause troubles
+static bool rejectUint() {
+   size_t bp = 0;
+   while (buf[bp] != '\0') {
+      bp++;
+      if (bp >= 1023) return false;
+   }
+   if (colNo < bp) {
+      // should not happen
+      colNo = 0;
+      return false;
+   }
+   colNo -= bp;
+   return true;
+}
+
+// read an unsigned integer until a space
+// ### exceptions: EXTRA_SPACE, ILLEGAL_NUM ###
+static unsigned readUint(istream& f) {
+   size_t bp = 0;
+   char ch = '\0';
+   while (bp < 1023) {
+      ch = readChar(f);
+      if (isTerminatingChar(ch)) {
+         retreatChar(f);
+         if (bp == 0 && ch == ' ')
+            throw EXTRA_SPACE;
+         break;
+      } else if (ch < 0) {
+         emitStatefulError(MISSING_DEF);
+         break;
+      }
+      if (!isDigit(ch))
+         emitStatefulError(ILLEGAL_NUM);
+
+      buf[bp++] = ch;
+   }
+   if (bp == 0) {
+      // read number failed
+      emitStatefulError(MISSING_NUM);
+   }
+   buf[bp] = '\0';
+   // cout << "read num " << buf << endl;
+   return atoi(buf);
+}
+
+// read a string (can contain spaces) until line end
+static string readStr(istream& f, unsigned maxlen = 0) {
+   size_t bp = 0;
+   char ch = '\0';
+   if (maxlen > 1023) maxlen = 1023;
+   while (maxlen == 0 || bp < maxlen) {
+      ch = readChar(f);
+      if (ch == '\n') {
+         retreatChar(f);
+         break;
+      }
+      buf[bp++] = ch;
+   }
+   if (bp == 0) {
+      // read string failed
+      emitStatefulError(MISSING_IDENTIFIER);
+   }
+   buf[bp] = '\0';
+   string rtn(buf);
+   // cout << "read str [" << buf << "]" << endl;
+   return rtn;
+}
+
+// a space after the header is then excepted
+// return whether this check is passed
+// if not, more string should be read
+static bool consumeAagHeader(istream& f) {
+   char ch = f.peek();
+   if (ch < 0) {
+      errMsg = "aag";
+      throw MISSING_IDENTIFIER;
+   }
+   if (f.peek() == ' ') throw EXTRA_SPACE;
+
+   string str = readStr(f, 3);
+   if (str != "aag")
+      throw ILLEGAL_IDENTIFIER;
+
+   return isTerminatingChar(f.peek());
+}
+
+static bool consumeSpace(istream& f) {
+   char ch = f.get();
+   if (ch != ' ') throw MISSING_SPACE;
+   colNo++;
+   return true;
+}
+
+static bool consumeNewline(istream& f) {
+   char ch = f.get();
+   if (ch != '\n') throw MISSING_NEWLINE;
+   colNo = 0;
+   lineNo++;
+   return true;
 }
 
 static void checkLiteralID(CirMgr* mgr, unsigned gid, bool checkEven, bool checkUnique = true) {
    if (gid / 2 > mgr->_maxNum) {
+      errInt = gid; rejectUint();
       throw MAX_LIT_ID;
-   } else if (checkEven && gid % 2 != 0) {
-      throw CANNOT_INVERTED;
-   } else if (checkUnique) {
+   }
+   if (checkUnique) {
       errGate = mgr->getGate(gid / 2);
-      if (gid == 0) {
+      if (gid / 2 == 0) {
+         errInt = gid; rejectUint();
          throw REDEF_CONST;
       } else if (errGate != 0 && errGate->_type != UNDEF_GATE) {
+         errInt = gid;
          throw REDEF_GATE;
       }
    }
-}
-
-static string flushToken(size_t& n) {
-   buf[n] = '\0';
-   string ret(buf);
-   n = 0;
-   return ret;
-}
-
-static void readChar(istream& f, size_t& n) {
-   buf[n++] = f.get();
-   colNo++;
-}
-
-static void parseTokens(istream& f, vector< vector<string>* >& tokenList) {
-   char c;
-   TokenType tok = start;
-   ParseState p = initial;
-   size_t bp = 0;
-
-   lineNo = 0;
-   colNo = -1;
-
-   vector<string>* currLine = new vector<string>;
-   tokenList.push_back(currLine);
-
-   while (!f.eof()) {
-      c = f.peek();
-      // cerr << "state=" << tok << " peek=" << c << endl;
-      switch (tok) {
-         case start:
-            if (isDigit(c)) {
-               tok = num;
-            } else if (currLine->empty() && p != initial && p != header) {
-               // specialize the very first character; it may be a symbol
-               tok = chr;
-               p = symbol;
-            } else if (p == initial) {
-               if (c == ' ')
-                  throw EXTRA_SPACE;
-               else if (c < 32) {
-                  errInt = (int)c;
-                  throw ILLEGAL_WSPACE;
-               }
-               p = header;
-            } else if (p == comment) {
-               if (c != '\n') {
-                  throw MISSING_NEWLINE;
-               }
-               tok = until_end;
-            }
-            else if (c == ' ') { f.ignore(1); tok = space; }
-            else if (c == '\n') { f.ignore(1); tok = newline; }
-            else if (c > 32) { tok = str; }
-            else {
-               errInt = (int)c;
-               throw ILLEGAL_WSPACE;
-            }
-            break;
-         case num:
-            if (isDigit(c)) {
-               readChar(f, bp);
-               // cerr << "=== read int " << c << endl;
-            } else if (c != ' ' && c != '\n') {
-               errMsg = "space character";
-               throw MISSING_NUM;
-            } else {
-               currLine->push_back(flushToken(bp));
-               // cerr << "===== flush int [" << buf << "]" << endl;
-               tok = start;
-            }
-            break;
-         case str:
-            if (c > 32 || (p == symbol && c == ' ')) {
-               readChar(f, bp);
-               // cerr << "=== read char [" << c << "]" << endl;
-            } else {
-               currLine->push_back(flushToken(bp));
-               // cerr << "===== flush str [" << buf << "]" << endl;
-               tok = start;
-            }
-            break;
-         case space:
-            if (c == ' ' && p != symbol)
-               throw EXTRA_SPACE;
-            colNo++;
-            tok = start;
-            break;
-         case newline:
-            // if (c == '\n') {
-            //    errMsg = "/FIXME/";
-            //    throw MISSING_DEF;
-            // }
-            lineNo++;
-            colNo = 0;
-            currLine = new vector<string>;
-            tokenList.push_back(currLine);
-            tok = start;
-            if (p == header) p = pipo;
-            break;
-         case chr:
-            buf[bp++] = c;
-            f.ignore(1); colNo++;
-            if (p == symbol) {
-               if (c == 'c') {
-                  p = comment;
-               } else if (c > 32 && c != 'i' && c != 'o' && c != 'l') {
-                  errMsg = c;
-                  throw ILLEGAL_SYMBOL_TYPE;
-               } else if (f.peek() <= 32) {
-                  // symbols MUST have an ID after it
-                  throw EXTRA_SPACE;
-               }
-            }
-            currLine->push_back(flushToken(bp));
-            // cerr << "===== flush one char [" << c << "]" << endl;
-            tok = start;
-            break;
-         case until_end:
-            while (!f.eof() && bp < 1023)
-               buf[bp++] = f.get();
-
-            currLine->push_back(flushToken(bp));
-            tok = none;
-            break;
-         default: break;
-      }
-      if (tok == none) {
-         // disgard buffer and ignore anything left
-         break;
-      }
+   if (checkEven && gid % 2 != 0) {
+      errInt = gid; rejectUint();
+      throw CANNOT_INVERTED;
    }
 }
 
@@ -399,196 +428,163 @@ CirMgr::readCircuit(const string& fileName)
 
    bool ok = true;
 
-   vector< vector<string>* > tokens;
-   vector<string>* line;
-   try{
-      parseTokens(f, tokens);
-
+   try {
       lineNo = 0;
       colNo = 0;
 
-      // ========== DEBUG  ==========
-      // for (size_t i = 0; i < tokens.size(); i++) {
-      //    line = tokens[i];
-      //    for (size_t j = 0; j < line->size(); j++) {
-      //       cout << "[" << (*line)[j] << "] ";
-      //    }
-      //    cout << endl;
-      // }
-
       // ========== HEADER ==========
-      line = tokens[0];
-      string headerErrMsg[5] = {"variables", "PIs", "Latches", "POs", "AIGs"};
-      for (size_t i = 0; i < 6; i++) {
-         if (i >= line->size()) {
-            if (i == 0) {
-               errMsg = "identifier";
-            } else {
-               errMsg = "number of " + headerErrMsg[i-1];
-            }
-            throw MISSING_NUM;
-         } else if (i == 0 && (*line)[0] != "aag") {
-            errMsg = (*line)[0];
-            throw ILLEGAL_IDENTIFIER;
-         } else {
-                 if (i == 1) { /* M */ _maxNum       = toUint((*line)[1]); }
-            else if (i == 2) { /* I */ _inputCount   = toUint((*line)[2]); }
-            else if (i == 3) { /* L */ _latchCount   = toUint((*line)[3]); }
-            else if (i == 4) { /* O */ _outputCount  = toUint((*line)[4]); }
-            else if (i == 5) { /* A */ _andGateCount = toUint((*line)[5]); }
-            colNo += (*line)[i].length() + 1;
-         }
-      }
-      if (line->size() > 6)
-         throw MISSING_NEWLINE;
+      state = STATE_HEADER;
+      if (!consumeAagHeader(f)) {
+         if (isDigit(f.peek()))
+            throw MISSING_SPACE;
 
-      // check for numbers
-      if (_maxNum < _inputCount + _latchCount + _andGateCount)
+         // continue reading and report the full string
+         getline(f, errMsg, ' ');
+         errMsg = "aag" + errMsg;
+         throw ILLEGAL_IDENTIFIER;
+      }
+
+      // errInt is relied here to record sub-state for error handling
+      errInt = 0;
+      consumeSpace(f); /* M */ _maxNum       = readUint(f); errInt++;
+      consumeSpace(f); /* I */ _inputCount   = readUint(f); errInt++;
+      consumeSpace(f); /* L */ _latchCount   = readUint(f); errInt++;
+      consumeSpace(f); /* O */ _outputCount  = readUint(f); errInt++;
+      consumeSpace(f); /* A */ _andGateCount = readUint(f);
+      consumeNewline(f);
+
+      // some stupid actions on lineNo here is just for following the ref program
+      lineNo--;
+
+      // check max num
+      if (_maxNum < _inputCount + _latchCount + _andGateCount) {
+         errInt = _maxNum;
+         errMsg = "Num of variables";
          throw NUM_TOO_SMALL;  // no need to handle colNo here
+      }
+
+      // we CANNOT handle latches now; throw an error if containing latches
+      if (_latchCount) {
+         errMsg = "latches";
+         throw ILLEGAL_NUM;
+      }
+
+      lineNo++;
 
       // const gate is safe to be created
       _gates[0] = new ConstGate();
 
-      // // ========== INPUT  ==========
-      // cerr << "=== 1 === " << endl;
-      errMsg = "PI";
-      // cerr << "=== 2 === " << endl;
+      // ========== INPUT  ==========
+      state = STATE_PI;
       for (size_t i = 0; i < _inputCount; i++) {
-         lineNo++; colNo = 0;
-         line = tokens[lineNo];
-         if (line->empty()) {
-            throw MISSING_DEF;
-         } else if (line->size() != 1) {
-            colNo = (*line)[0].length();
-            throw MISSING_NEWLINE;
-         }
-         unsigned lid = toUint((*line)[0]);
-         errInt = lid;
+         unsigned lid = readUint(f);
          checkLiteralID(this, lid, true);
-
          addPI(lineNo+1, lid);
          // cerr << "=== PI === " << lid/2 << endl;
+         consumeNewline(f);
       }
 
       // ========== LATCH  ========== (omitted)
 
       // ========== OUTPUT ==========
-      errMsg = "PO";
+      state = STATE_PO;
       for (size_t i = 0; i < _outputCount; i++) {
-         lineNo++; colNo = 0;
-         line = tokens[lineNo];
-         if (line->empty()) {
-            throw MISSING_DEF;
-         } else if (line->size() != 1) {
-            colNo = (*line)[0].length();
-            throw MISSING_NEWLINE;
-         }
-         unsigned lid = toUint((*line)[0]);
-
-         errInt = lid;
+         unsigned lid = readUint(f);
          checkLiteralID(this, lid, false, false);
-
          addPO(lineNo+1, lid);
          // cerr << "=== PO === " << lid/2 << " " << lid%2 << endl;
+         consumeNewline(f);
       }
 
       // ========== AIGATE ==========
-      errMsg = "AIG";
+      state = STATE_AIG;
       for (size_t i = 0; i < _andGateCount; i++) {
-         lineNo++; colNo = 0;
-         line = tokens[lineNo];
-
          unsigned lhs1, lhs2, rhs;
-
-         for (size_t j = 0; j < 3; j++) {
-            if (j >= line->size()) {
-               if (j == 0)
-                  throw MISSING_DEF;
-               else
-                  throw MISSING_NUM;
-            } else if (j == 0) rhs  = toUint((*line)[0]);
-              else if (j == 1) lhs1 = toUint((*line)[1]);
-              else if (j == 2) lhs2 = toUint((*line)[2]);
-
-            colNo += (*line)[j].length() + 1;
-         }
-
+         rhs = readUint(f);
          checkLiteralID(this, rhs, true);
+         consumeSpace(f);
+
+         lhs1 = readUint(f);
          checkLiteralID(this, lhs1, false, false);
+         consumeSpace(f);
+
+         lhs2 = readUint(f);
          checkLiteralID(this, lhs2, false, false);
-
-         // CirGate* fan1 = cirMgr->getGate(lhs1 / 2);
-         // if (!fan1) fan1 = cirMgr->addUndef(lhs1 / 2);
-
-         // CirGate* fan2 = cirMgr->getGate(lhs2 / 2);
-         // if (!fan2) fan2 = cirMgr->addUndef(lhs2 / 2);
 
          addAIG(lineNo+1, rhs, lhs1, lhs2);
          // cerr << "=== AIG === " << rhs << " " << lhs1 << " " << lhs2 << endl;
+         consumeNewline(f);
       }
-      lineNo++;
 
       // ========== SYMBOL ==========
-      for (bool done = false; lineNo < tokens.size(); lineNo++) {
-         line = tokens[lineNo];
-         char c;
-         unsigned cnt = 0;
-         GateList* ls;
-         for (size_t i = 0; i < 3; i++) {
-            if (i >= line->size() && i != 0) {
-               // if the first character is not found, it is not an error
-               errMsg = "symbolic name";
-               throw MISSING_DEF;
-            } else if (i == 0) {
-               if (line->empty() || (*line)[0][0] == 'c') {
-                  done = true;
-                  break;
-               }
-               c = (*line)[0][0];
-            } else if (i == 1) {
-               cnt = toUint((*line)[1]);
-            }
-            else if (i == 2) {
-               if ((*line)[2].empty()) {
-                  errMsg = "symbolic name";
-                  throw MISSING_DEF;
-               }
-               else if (c == 'i') { ls = &_piList; errMsg = "PI index"; }
-               else if (c == 'o') { ls = &_poList; errMsg = "PO index"; }
-               else {
-                  errMsg = c;
-                  throw ILLEGAL_SYMBOL_TYPE;
-               }
-               if (cnt >= ls->size()) {
-                  throw NUM_TOO_BIG;
-               }
-            };
-            colNo += (*line)[i].length() + 1;
+      state = STATE_SYMBOL;
+
+      GateList* ls;
+
+      while (true) {
+         ls = 0;
+
+         char symbolType = readChar(f);
+         switch (symbolType) {
+            case 'i': ls = &_piList; break;
+            case 'o': ls = &_poList; break;
+            case 'c': consumeNewline(f); break;
+            case -1: break; // EOF; it is just fine
+            case ' ':  retreatChar(f); throw EXTRA_SPACE; break;
+            case '\n': retreatChar(f); throw MISSING_IDENTIFIER; break;
+            default:   retreatChar(f); errMsg = symbolType; throw ILLEGAL_SYMBOL_TYPE; break;
          }
 
-         if (done) break;
+         if (!ls) break;
+
+         unsigned cnt;
+         try {
+            cnt = readUint(f);
+         } catch (CirParseError err) {
+            if (err == ILLEGAL_NUM) {
+               // circulated with pain...
+               retreatChar(f);
+               string illIdx;
+               getline(f, illIdx, ' ');
+               errMsg = errMsg + "(" + illIdx + ")";
+            }
+            throw err;
+         }
+         consumeSpace(f);
+
+         if (cnt >= ls->size()) {
+            if (ls == &_piList) errMsg = "PI index";
+            else if (ls == &_poList) errMsg = "PO index";
+            errInt = cnt;
+            throw NUM_TOO_BIG;
+         }
+
+         try {
+            errMsg = readStr(f);
+         } catch (CirParseError err) {
+            if (err == ILLEGAL_WSPACE)
+               throw ILLEGAL_SYMBOL_NAME;
+            throw err;
+         }
 
          errGate = (*ls)[cnt];
-         if (!(*ls)[cnt]->_name.empty()) {
-            errMsg = (*ls)[cnt]->getTypeStr();
-            errInt = (*ls)[cnt]->getID();
-            cout << (*ls)[cnt]->_name;
+         if (!errGate->_name.empty()) {
+            errMsg = symbolType;
+            errInt = cnt;
             throw REDEF_SYMBOLIC_NAME;
          }
 
-         (*ls)[cnt]->_name = (*line)[2];
-         // cout << "=== SYM === " << (*line)[0] << " " << (*line)[1] << " " << (*line)[2] << endl;
+         errGate->_name = errMsg;
+         // cout << "=== SYM === " << symbolType << " " << cnt << " " << errMsg << endl;
+         consumeNewline(f);
       }
 
       // ========== COMMENT ========= (no need to record this)
-
+      state = STATE_FINISHED;
    } catch (CirParseError err) {
       ok = false;
       parseError(err);
    }
-
-   for (size_t i = 0; i < tokens.size(); i++)
-      delete tokens[i];
 
    initialize();
 
