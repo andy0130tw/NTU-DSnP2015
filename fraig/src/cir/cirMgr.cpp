@@ -264,6 +264,7 @@ static unsigned readUint(istream& f) {
 }
 
 // read a string (can contain spaces) until line end
+// ### exceptions: MISSING_IDENTIFIER ###
 static string readStr(istream& f, unsigned maxlen = 0) {
    size_t bp = 0;
    char ch = '\0';
@@ -288,7 +289,8 @@ static string readStr(istream& f, unsigned maxlen = 0) {
 
 // a space after the header is then excepted
 // return whether this check is passed
-// if not, more string should be read
+// if not, more string should be read before crashing
+// ### exceptions: MISSING_IDENTIFIER, EXTRA_SPACE, ILLEGAL_IDENTIFIER ###
 static bool consumeAagHeader(istream& f) {
    char ch = f.peek();
    if (ch < 0) {
@@ -304,6 +306,7 @@ static bool consumeAagHeader(istream& f) {
    return isTerminatingChar(f.peek());
 }
 
+// ### exceptions: MISSING_SPACE ###
 static bool consumeSpace(istream& f) {
    char ch = f.get();
    if (ch != ' ') throw MISSING_SPACE;
@@ -311,6 +314,7 @@ static bool consumeSpace(istream& f) {
    return true;
 }
 
+// ### exceptions: MISSING_NEWLINE ###
 static bool consumeNewline(istream& f) {
    char ch = f.get();
    if (ch != '\n') throw MISSING_NEWLINE;
@@ -319,6 +323,7 @@ static bool consumeNewline(istream& f) {
    return true;
 }
 
+// ### exceptions: MAX_LIT_ID, REDEF_CONST, REDEF_GATE, CANNOT_INVERTED ###
 static void checkLiteralID(CirMgr* mgr, unsigned gid, bool checkEven, bool checkUnique = true) {
    if (gid / 2 > mgr->_maxNum) {
       errInt = gid; rejectUint();
