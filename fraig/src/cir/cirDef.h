@@ -26,6 +26,9 @@ typedef vector<CirGate*>           GateList;
 typedef vector<CirGateV>           GateVList;
 typedef vector<unsigned>           IdList;
 typedef map<unsigned, CirGate*>    GateMap;
+typedef unsigned                   CirSimData;
+
+const CirSimData SIM_HIGHEST_BIT = 1 << ((sizeof(CirSimData) << 3) - 1);
 
 enum GateType
 {

@@ -35,10 +35,11 @@ public:
    GateType _type;
    string _name;
 
-   GateVList _fanoutList;
-
    CirGateV _fanin[2];
    size_t _faninCount;
+
+   GateVList _fanoutList;
+
    CirGate* getFanin(size_t i) const { return (CirGate*) (_fanin[i] & PTR_MASK); }
    void setFanin(size_t i, CirGate* const g) { _fanin[i] = (CirGateV)g | (_fanin[i] & 1); }
    void setFanin(size_t i, CirGateV const g) { _fanin[i] = g; }
@@ -108,15 +109,20 @@ public:
 
    virtual bool isAig() const { return false; }
 
+   virtual void simulate() {}
+   CirSimData getSimData(bool inv = false) { return (inv ? ~_sim_data : _sim_data); }
+   void setSimData(CirSimData s) { _sim_data = s; }
+
 private:
    unsigned _id;
    mutable unsigned _ref;
    int _lineno;
 
    static unsigned _global_ref;
-
    static CirGateV const PTR_MASK = ~((CirGateV)1);
+
 protected:
+   CirSimData _sim_data;
 };
 
 class AigGate: public CirGate {
@@ -137,6 +143,12 @@ public:
    }
 
    bool isAig() const { return true; }
+   void simulate() {
+      assert(_faninCount == 2);
+      CirSimData sim1 = getFanin(0)->getSimData(getInv(0));
+      CirSimData sim2 = getFanin(1)->getSimData(getInv(1));
+      _sim_data = sim1 & sim2;
+   }
 
 private:
 };
@@ -158,14 +170,15 @@ private:
 class ConstGate: public CirGate {
 public:
    // constant is always from gid 0
-   ConstGate(): CirGate(CONST_GATE, 0, 0) {};
+   ConstGate(): CirGate(CONST_GATE, 0, 0) { _sim_data = 0; };
 
    bool addFanin(CirGate* g, bool inv) { return false; }
 
    string getTypeStr() const { return "CONST"; }
    void printGate() const { cout << "0"; }
 
-
+   // cannot write simData to it
+   void setSimData(CirSimData s) {}
 private:
 };
 
@@ -181,6 +194,10 @@ public:
       if (getFanin(0)->_type == UNDEF_GATE) cout << "*";
       if (getInv(0)) cout << "!";
       cout << getFanin(0)->getID();
+   }
+
+   void simulate() {
+      _sim_data = getFanin(0)->getSimData(getInv(0));
    }
 private:
 };

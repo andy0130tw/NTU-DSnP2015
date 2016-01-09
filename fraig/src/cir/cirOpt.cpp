@@ -37,7 +37,7 @@ CirMgr::sweep()
 {
    // Output Example:
    // Sweeping: AIG(XX) removed...
-   dfs();
+   getDfsList();
 
    GateMap::iterator it = _gates.begin();
    while (it != _gates.end()) {
@@ -69,7 +69,7 @@ CirMgr::optimize()
    // Output Example:
    // Simplifying: XX merging (!)YY...
 
-   bool doMerge, structChanged = false;
+   bool noop, structChanged = false;
 
    CirGate *ga, *gb;
    CirGate* gnew;
@@ -81,7 +81,7 @@ CirMgr::optimize()
    for (size_t i = 0, n = _dfsList.size(); i < n; i++) {
       if (!_dfsList[i]->isAig()) continue;
 
-      doMerge = false;
+      noop = true;
       ga = _dfsList[i]->getFanin(0);
       gb = _dfsList[i]->getFanin(1);
       ia = _dfsList[i]->getInv(0);
@@ -94,27 +94,25 @@ CirMgr::optimize()
          swap(ia, ib);
       }
 
-      if (ga->_type != CONST_GATE && ga != gb) continue;
-
-      // not checking for duplicating
-      ga->eraseFanout(_dfsList[i]);
-      gb->eraseFanout(_dfsList[i]);
-
       if ((ga->_type == CONST_GATE && !ia) || (ga == gb && ia != ib)) {
          // (0 AND X = 0) or (X AND ~X = 0)
-         doMerge = true;
+         noop = false;
          gnew = getGate(0);
          inew = false;
       } else if ((ga->_type == CONST_GATE && ia) || (ga == gb && ia == ib)) {
          // (1 AND X = X) or (X AND X = X)
-         doMerge = true;
+         noop = false;
          gnew = gb;
          inew = ib;
-      }
+      } else noop = true;
 
-      if (!doMerge) continue;
+      if (noop) continue;
 
       structChanged = true;
+
+      // not checking for duplicating
+      ga->eraseFanout(_dfsList[i]);
+      gb->eraseFanout(_dfsList[i]);
 
       // print out the reason if available
       cout << "Simplifying: " << gnew->getID() << " merging ";

@@ -61,7 +61,11 @@ CirGate::reportGate() const
    cout << "= " << setw(46) << left << ss.str() << " =" << endl;
 
    ss.str("");
-   ss << "Values: " << "[Not Implemented...]";
+   ss << "Value: ";
+   for (CirSimData i = SIM_HIGHEST_BIT, n = 0; i > 0; i >>= 1, n++) {
+      if (n && n % 4 == 0) ss << "_";
+      ss << (_sim_data & i ? 1 : 0);
+   }
    cout << "= " << setw(46) << left << ss.str() << " =" << endl;
 
    cout << H_DIV << endl;

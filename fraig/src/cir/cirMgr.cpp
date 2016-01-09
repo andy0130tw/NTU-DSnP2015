@@ -217,8 +217,8 @@ static bool retreatChar(istream& f) {
 }
 
 // count colNo backward BASED ON THE INTERNAL BUFFER
-// dangerous!! retreat ASAP or it may cause troubles
-static bool rejectUint() {
+// dangerous!! retreating more than once causes troubles
+static bool rejectBuffer() {
    size_t bp = 0;
    while (buf[bp] != '\0') {
       bp++;
@@ -326,13 +326,13 @@ static bool consumeNewline(istream& f) {
 // ### exceptions: MAX_LIT_ID, REDEF_CONST, REDEF_GATE, CANNOT_INVERTED ###
 static void checkLiteralID(CirMgr* mgr, unsigned gid, bool checkEven, bool checkUnique = true) {
    if (gid / 2 > mgr->_maxNum) {
-      errInt = gid; rejectUint();
+      errInt = gid; rejectBuffer();
       throw MAX_LIT_ID;
    }
    if (checkUnique) {
       errGate = mgr->getGate(gid / 2);
       if (gid / 2 == 0) {
-         errInt = gid; rejectUint();
+         errInt = gid; rejectBuffer();
          throw REDEF_CONST;
       } else if (errGate != 0 && errGate->_type != UNDEF_GATE) {
          errInt = gid;
@@ -340,7 +340,7 @@ static void checkLiteralID(CirMgr* mgr, unsigned gid, bool checkEven, bool check
       }
    }
    if (checkEven && gid % 2 != 0) {
-      errInt = gid; rejectUint();
+      errInt = gid; rejectBuffer();
       throw CANNOT_INVERTED;
    }
 }
