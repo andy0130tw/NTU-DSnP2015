@@ -20,6 +20,8 @@
 using namespace std;
 
 // TODO: Implement memeber functions for class CirMgr
+#define BUFFER_SIZE 1024
+#define BUFFER_SIZE_SAFE (BUFFER_SIZE - 1)
 
 /*******************************/
 /*   Global variable and enum  */
@@ -54,7 +56,7 @@ enum CirParseError {
 /**************************************/
 static unsigned lineNo = 0;  // in printint, lineNo needs to ++
 static unsigned colNo  = 0;  // in printing, colNo needs to ++
-static char buf[1024];
+static char buf[BUFFER_SIZE];
 static string errMsg;
 static int errInt;
 static CirGate *errGate;
@@ -171,8 +173,15 @@ static inline bool isDigit(char c) {
 // due to some errors are universal but state-dependent,
 // when reading or consuming fails, this function is called
 // to make an approperiate error message based on internal state
+// these "stateful" errors are:
+//   * ILLEGAL_NUM
+//   * MISSING_NUM
+//   * MISSING_IDENTIFIER
+//   * MISSING_DEF
+// this function is only intended to emit an error,
+// do not retreat or touch the buffer here!!
 static void emitStatefulError(CirParseError pe) {
-   static const string headerErrMsg[5] = { "vars", "PIs", "Latches", "POs", "AIGs" };
+   static const string headerErrMsg[5] = { "vars", "PIs", "latches", "POs", "AIGs" };
    bool doSuffix = false;
    switch (state) {
       case STATE_HEADER: errMsg = "number of " + headerErrMsg[errInt]; break;
@@ -187,10 +196,9 @@ static void emitStatefulError(CirParseError pe) {
          break;
       default: break;
    }
-   if (doSuffix) {
-      if (pe == MISSING_NUM)
-         errMsg += " literal ID";
-   }
+   if (pe == MISSING_NUM)
+      if (doSuffix) errMsg += " literal ID";
+
    throw pe;
 }
 
@@ -222,7 +230,7 @@ static bool rejectBuffer() {
    size_t bp = 0;
    while (buf[bp] != '\0') {
       bp++;
-      if (bp >= 1023) return false;
+      if (bp >= BUFFER_SIZE_SAFE) return false;
    }
    if (colNo < bp) {
       // should not happen
@@ -234,11 +242,12 @@ static bool rejectBuffer() {
 }
 
 // read an unsigned integer until a space
-// ### exceptions: EXTRA_SPACE, ILLEGAL_NUM ###
+// ### exceptions: EXTRA_SPACE ###
+// ### stateful  : MISSING_DEF, ILLEGAL_NUM, MISSING_NUM ###
 static unsigned readUint(istream& f) {
    size_t bp = 0;
    char ch = '\0';
-   while (bp < 1023) {
+   while (bp < BUFFER_SIZE_SAFE) {
       ch = readChar(f);
       if (isTerminatingChar(ch)) {
          retreatChar(f);
@@ -264,14 +273,15 @@ static unsigned readUint(istream& f) {
 }
 
 // read a string (can contain spaces) until line end
-// ### exceptions: MISSING_IDENTIFIER ###
-static string readStr(istream& f, unsigned maxlen = 0) {
+// if readWord is set, stop at a "terminating" char (ie. a space)
+// ### stateful: MISSING_IDENTIFIER ###
+static string readStr(istream& f, bool readWord = false, unsigned maxlen = 0) {
    size_t bp = 0;
    char ch = '\0';
-   if (maxlen > 1023) maxlen = 1023;
+   if (maxlen > BUFFER_SIZE_SAFE) maxlen = BUFFER_SIZE_SAFE;
    while (maxlen == 0 || bp < maxlen) {
       ch = readChar(f);
-      if (ch == '\n') {
+      if (ch == '\n' || (readWord && isTerminatingChar(ch))) {
          retreatChar(f);
          break;
       }
@@ -292,15 +302,16 @@ static string readStr(istream& f, unsigned maxlen = 0) {
 // if not, more string should be read before crashing
 // ### exceptions: MISSING_IDENTIFIER, EXTRA_SPACE, ILLEGAL_IDENTIFIER ###
 static bool consumeAagHeader(istream& f) {
+   static const string AAG_HEADER = "aag";
    char ch = f.peek();
    if (ch < 0) {
-      errMsg = "aag";
+      errMsg = AAG_HEADER;
       throw MISSING_IDENTIFIER;
    }
    if (f.peek() == ' ') throw EXTRA_SPACE;
 
-   string str = readStr(f, 3);
-   if (str != "aag")
+   string str = readStr(f, true, 3);
+   if (str != AAG_HEADER)
       throw ILLEGAL_IDENTIFIER;
 
    return isTerminatingChar(f.peek());
@@ -444,21 +455,29 @@ CirMgr::readCircuit(const string& fileName)
             throw MISSING_SPACE;
 
          // continue reading and report the full string
-         getline(f, errMsg, ' ');
-         errMsg = "aag" + errMsg;
+         errMsg = "aag" + readStr(f, true);
          throw ILLEGAL_IDENTIFIER;
       }
 
       // errInt is relied here to record sub-state for error handling
       errInt = 0;
-      consumeSpace(f); /* M */ _maxNum       = readUint(f); errInt++;
-      consumeSpace(f); /* I */ _inputCount   = readUint(f); errInt++;
-      consumeSpace(f); /* L */ _latchCount   = readUint(f); errInt++;
-      consumeSpace(f); /* O */ _outputCount  = readUint(f); errInt++;
-      consumeSpace(f); /* A */ _andGateCount = readUint(f);
+      try {
+         consumeSpace(f); /* M */ _maxNum       = readUint(f); errInt++;
+         consumeSpace(f); /* I */ _inputCount   = readUint(f); errInt++;
+         consumeSpace(f); /* L */ _latchCount   = readUint(f); errInt++;
+         consumeSpace(f); /* O */ _outputCount  = readUint(f); errInt++;
+         consumeSpace(f); /* A */ _andGateCount = readUint(f);
+      } catch (CirParseError err) {
+         if (err == ILLEGAL_NUM) {
+            retreatChar(f);
+            errMsg = errMsg + "(" + readStr(f, true) + ")";
+         }
+         throw err;
+      }
       consumeNewline(f);
 
-      // some stupid actions on lineNo here is just for following the ref program
+      // the checking should be done only after a successful line break
+      // so, retreat one line...
       lineNo--;
 
       // check max num
@@ -474,10 +493,14 @@ CirMgr::readCircuit(const string& fileName)
          throw ILLEGAL_NUM;
       }
 
+      // ... and advance if everything is fine
       lineNo++;
 
       // const gate is safe to be created
       _gates[0] = new ConstGate();
+      // reserve space for gates; this is critial for speed!!
+      _piList.reserve(_inputCount);
+      _poList.reserve(_outputCount);
 
       // ========== INPUT  ==========
       state = STATE_PI;
@@ -536,7 +559,7 @@ CirMgr::readCircuit(const string& fileName)
             case 'c': consumeNewline(f); break;
             case -1: break; // EOF; it is just fine
             case ' ':  retreatChar(f); throw EXTRA_SPACE; break;
-            case '\n': retreatChar(f); throw MISSING_IDENTIFIER; break;
+            case '\n': retreatChar(f); errMsg = "symbol type"; throw MISSING_IDENTIFIER; break;
             default:   retreatChar(f); errMsg = symbolType; throw ILLEGAL_SYMBOL_TYPE; break;
          }
 
@@ -547,11 +570,8 @@ CirMgr::readCircuit(const string& fileName)
             cnt = readUint(f);
          } catch (CirParseError err) {
             if (err == ILLEGAL_NUM) {
-               // circulated with pain...
                retreatChar(f);
-               string illIdx;
-               getline(f, illIdx, ' ');
-               errMsg = errMsg + "(" + illIdx + ")";
+               errMsg = errMsg + "(" + readStr(f, true) + ")";
             }
             throw err;
          }
@@ -569,6 +589,7 @@ CirMgr::readCircuit(const string& fileName)
          } catch (CirParseError err) {
             if (err == ILLEGAL_WSPACE)
                throw ILLEGAL_SYMBOL_NAME;
+            // should be MISSING_IDENTIFIER
             throw err;
          }
 
