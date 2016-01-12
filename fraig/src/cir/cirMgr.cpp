@@ -654,6 +654,7 @@ CirMgr::printNetlist() const
 
    for (unsigned i = 0, n = _dfsList.size(); i < n; ++i) {
       if (!_dfsList[i]) continue;
+      if (_dfsList[i]->_type == UNDEF_GATE) continue;
       cout << "[" << i << "] "
            << setw(4) << left << _dfsList[i]->getTypeStr();
 

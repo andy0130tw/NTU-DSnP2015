@@ -27,15 +27,15 @@ using namespace std;
 /**************************************/
 /*   Static varaibles and functions   */
 /**************************************/
-static inline void fancyIO(bool x) {
-   cout << (x ? "\033[01m\033[01m1\033[0m" : "\033[90m\033[02m0\033[0m");
-}
+// static inline void fancyIO(bool x) {
+//    cout << (x ? "\033[01m\033[01m1\033[0m" : "\033[90m\033[02m0\033[0m");
+// }
 
-static void printSimData(CirSimData& s) {
-   for (CirSimData i = SIM_HIGHEST_BIT; i > 0; i >>= 1) {
-      fancyIO(s & i);
-   }
-}
+// static void printSimData(CirSimData& s) {
+//    for (CirSimData i = SIM_HIGHEST_BIT; i > 0; i >>= 1) {
+//       fancyIO(s & i);
+//    }
+// }
 
 /************************************************/
 /*   Public member functions about Simulation   */
@@ -60,7 +60,7 @@ CirMgr::randomSim()
    for (size_t i = 0; i < l.size(); i++) {
       if (!l[i]->isAig()) continue;
       l[i]->simulate();
-      CirSimData val = l[i]->getSimData();
+      // CirSimData val = l[i]->getSimData();
       // cout << "sim    AIG " << setw(3) << l[i]->getID() << " = ";
       // printSimData(val);
       // cout << endl;

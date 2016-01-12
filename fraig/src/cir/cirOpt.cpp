@@ -142,10 +142,11 @@ CirMgr::optimize()
       delete _dfsList[i];
       _andGateCount--;
 
-      #ifdef CHECK_INTEGRITY
-      checkIntegrity();
-      #endif  // CHECK_INTEGRITY
    }
+
+   #ifdef CHECK_INTEGRITY
+   checkIntegrity();
+   #endif  // CHECK_INTEGRITY
 
    if (structChanged)
       _dfsList_clean = false;
