@@ -21,12 +21,15 @@ using namespace std;
 // TODO: Feel free to define your own classes, variables, or functions.
 
 class CirGate;
+class CirStrashKey;
 
 //------------------------------------------------------------------------
 //   Define classes
 //------------------------------------------------------------------------
 class CirGate
 {
+   friend CirStrashKey;
+
 public:
    CirGate(GateType t = UNDEF_GATE, unsigned gid = 0, int ln = 0):
       _type(t), _faninCount(0), _id(gid), _ref(_global_ref), _lineno(ln) {}
@@ -211,6 +214,34 @@ public:
    }
 
 private:
+};
+
+//--------------------------------
+// hash keys used in HashMap class
+//--------------------------------
+class CirStrashKey {
+public:
+   CirStrashKey(CirGate* g) {
+      // dicision: hash pointer (more random?) or hash id?
+      // _in0 = g->_fanin[0] >> 1;
+      _v0 = g->getFanin(0)->getID();
+      // _v1 = g->_fanin[1] >> 1;
+      _v1 = g->getFanin(1)->getID();
+      if (_v0 > _v1) swap(_v0, _v1);
+
+      // |    fin0    |    fin1    |  inv  |
+      // |<--- 15 --->|<--- 16 --->|<- 1 ->|
+      // use + to cause _v1 to overflow, prevent collision even more
+      _hash = ((_v0 << 17) + (_v1 << 1)) | (g->getInv(0) ^ g->getInv(1));
+   };
+   ~CirStrashKey() {};
+   size_t operator() () const { return _hash; }
+   bool operator == (const CirStrashKey& k) const {
+      return _v0 == k._v0 && _v1 == k._v1 && (_hash & 1) == (k._hash & 1);
+   }
+private:
+   size_t _v0, _v1, _hash;
+   // CirGate* _in0, _in1;
 };
 
 #endif // CIR_GATE_H
