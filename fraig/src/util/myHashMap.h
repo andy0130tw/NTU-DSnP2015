@@ -15,6 +15,13 @@ using namespace std;
 
 // TODO: Implement your own HashMap and Cache classes.
 
+#define HASHMAP_DEBUG
+
+#ifdef HASHMAP_DEBUG
+#define ADD_COLL_COUNT (_coll_count++)
+#else
+#define ADD_COLL_COUNT ((void)0)
+#endif
 //-----------------------
 // Define HashMap classes
 //-----------------------
@@ -25,11 +32,11 @@ using namespace std;
 // {
 // public:
 //    HashKey() {}
-// 
+//
 //    size_t operator() () const { return 0; }
-// 
+//
 //    bool operator == (const HashKey& k) const { return true; }
-// 
+//
 // private:
 // };
 //
@@ -43,71 +50,12 @@ public:
    HashMap(size_t b) : _numBuckets(0), _buckets(0) { init(b); }
    ~HashMap() { reset(); }
 
-   // [Optional] TODO: implement the HashMap<HashKey, HashData>::iterator
-   // o An iterator should be able to go through all the valid HashNodes
-   //   in the HashMap
-   // o Functions to be implemented:
-   //   - constructor(s), destructor
-   //   - operator '*': return the HashNode
-   //   - ++/--iterator, iterator++/--
-   //   - operators '=', '==', !="
-   //
-   // (_bId, _bnId) range from (0, 0) to (_numBuckets, 0)
-   //
-   class iterator
-   {
-      friend class HashMap<HashKey, HashData>;
-
-   public:
-      iterator(HashMap<HashKey, HashData>* h = 0, size_t b = 0, size_t bn = 0)
-      : _hash(h), _bId(b), _bnId(bn) {}
-      iterator(const iterator& i)
-      : _hash(i._hash), _bId(i._bId), _bnId(i._bnId) {}
-      ~iterator() {} // Should NOT delete HashData
-
-      const HashNode& operator * () const { return (*_hash)[_bId][_bnId]; }
-      HashNode& operator * () { return (*_hash)[_bId][_bnId]; }
-      iterator& operator ++ () {
-         if (_hash == 0) return (*this);
-         if (_bId >= _hash->_numBuckets) return (*this);
-         if (++_bnId >= (*_hash)[_bId].size()) {
-            while ((++_bId < _hash->_numBuckets) && (*_hash)[_bId].empty());
-            _bnId = 0;
-         }
-         return (*this);
-      }
-      iterator& operator -- () {
-         if (_hash == 0) return (*this);
-         if (_bnId == 0) {
-            if (_bId == 0) return (*this);
-            while ((*_hash)[--_bId].empty())
-               if (_bId == 0) return (*this);
-            _bnId = (*_hash)[_bId].size() - 1;
-         }
-         else
-            --_bnId;
-         return (*this);
-      }
-      iterator operator ++ (int) { iterator li=(*this); ++(*this); return li; }
-      iterator operator -- (int) { iterator li=(*this); --(*this); return li; }
-
-      iterator& operator = (const iterator& i) {
-         _hash = i._hash; _bId = i._bId; _bnId = i._bnId; return (*this); }
-
-      bool operator != (const iterator& i) const { return !(*this == i); }
-      bool operator == (const iterator& i) const {
-         return (_hash == i._hash && _bId == i._bId && _bnId == i._bnId); }
-
-   private:
-      HashMap<HashKey, HashData>*   _hash;
-      size_t                        _bId;
-      size_t                        _bnId;
-   };
-
    void init(size_t b) {
       reset(); _numBuckets = b; _buckets = new vector<HashNode>[b]; }
    void reset() {
-      _numBuckets = 0;
+      #ifdef HASHMAP_DEBUG
+      resetCollCount();
+      #endif  // HASHMAP_DEBUG
       if (_buckets) { delete [] _buckets; _buckets = 0; }
    }
    size_t numBuckets() const { return _numBuckets; }
@@ -115,27 +63,6 @@ public:
    vector<HashNode>& operator [] (size_t i) { return _buckets[i]; }
    const vector<HashNode>& operator [](size_t i) const { return _buckets[i]; }
 
-   // TODO: implement these functions
-   //
-   // Point to the first valid data
-   iterator begin() const {
-      if (_buckets == 0) return end();
-/*
-      size_t i = 0;
-      while (_buckets[i].empty()) ++i;
-      if (i == _numBuckets) return end();
-      return iterator(const_cast<HashMap<HashKey, HashData>*>(this), i, 0);
-*/
-      for (size_t i = 0; i < _numBuckets; ++i)
-         if (!_buckets[i].empty())
-            return iterator(const_cast<HashMap<HashKey, HashData>*>(this), i, 0);
-      return end();
-   }
-   // Pass the end
-   iterator end() const {
-      return iterator(const_cast<HashMap<HashKey, HashData>*>(this),
-             _numBuckets, 0);
-   }
    // return true if no valid data
    bool empty() const {
       for (size_t i = 0; i < _numBuckets; ++i)
@@ -154,11 +81,13 @@ public:
    // else return false;
    bool check(const HashKey& k, HashData& n) const {
       size_t b = bucketNum(k);
-      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i)
+      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i) {
+         ADD_COLL_COUNT;
          if (_buckets[b][i].first == k) {
             n = _buckets[b][i].second;
             return true;
          }
+      }
       return false;
    }
 
@@ -166,9 +95,11 @@ public:
    // return false is k is already in the hash ==> will not insert
    bool insert(const HashKey& k, const HashData& d) {
       size_t b = bucketNum(k);
-      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i)
+      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i) {
+         ADD_COLL_COUNT;
          if (_buckets[b][i].first == k)
             return false;
+      }
       _buckets[b].push_back(HashNode(k, d));
       return true;
    }
@@ -177,11 +108,13 @@ public:
    // return false is k is already in the hash ==> still do the insertion
    bool replaceInsert(const HashKey& k, const HashData& d) {
       size_t b = bucketNum(k);
-      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i)
+      for (size_t i = 0, bn = _buckets[b].size(); i < bn; ++i) {
+         ADD_COLL_COUNT;
          if (_buckets[b][i].first == k) {
             _buckets[b][i].second = d;
             return false;
          }
+      }
       _buckets[b].push_back(HashNode(k, d));
       return true;
    }
@@ -189,6 +122,11 @@ public:
    // Need to be sure that k is not in the hash
    void forceInsert(const HashKey& k, const HashData& d) {
       _buckets[bucketNum(k)].push_back(HashNode(k, d)); }
+
+   #ifdef HASHMAP_DEBUG
+   unsigned getCollCount() const { return _coll_count; }
+   void resetCollCount() const { _coll_count = 0; }
+   #endif  // HASHMAP_DEBUG
 
 private:
    // Do not add any extra data member
@@ -198,6 +136,9 @@ private:
    size_t bucketNum(const HashKey& k) const {
       return (k() % _numBuckets); }
 
+   #ifdef HASHMAP_DEBUG
+   mutable unsigned         _coll_count;
+   #endif  // HASHMAP_DEBUG
 };
 
 
@@ -211,14 +152,14 @@ private:
 // {
 // public:
 //    CacheKey() {}
-//    
+//
 //    size_t operator() () const { return 0; }
-//   
+//
 //    bool operator == (const CacheKey&) const { return true; }
-//       
+//
 // private:
-// }; 
-// 
+// };
+//
 template <class CacheKey, class CacheData>
 class Cache
 {
