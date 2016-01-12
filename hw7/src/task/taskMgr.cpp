@@ -17,6 +17,13 @@ using namespace std;
 
 TaskMgr *taskMgr = 0;
 
+// ------ note after handing homework ------
+// things in "DO NOT CHANGE THIS PART" are changed
+// but the added code must be wrapped in REF_COMPARSION.
+// when this macro is defined, the program behaves (almost) like
+// the ref code, but the code is not exactly the same as original...
+// ------ note after handing homework ------
+
 // BEGIN: DO NOT CHANGE THIS PART
 TaskNode::TaskNode()
 {
@@ -48,6 +55,9 @@ TaskMgr::remove(size_t nMachines)
 {
    for (size_t i = 0, n = nMachines; i < n; ++i) {
       size_t j = rnGen(size());
+      #ifndef REF_COMPARSION
+      cout << "Task node removed: " << _taskHeap[j] << endl;
+      #endif  // REF_COMPARSION
       assert(_taskHash.remove(_taskHeap[j]));
       _taskHeap.delData(j);
    }
@@ -63,7 +73,13 @@ TaskMgr::remove(const string& s)
 {
    TaskNode n(s, 0);
    for (size_t i = 0, m = size(); i < m; ++i)
-      if (_taskHeap[i] == n) { _taskHeap.delData(i); break; }
+      if (_taskHeap[i] == n) {
+         #ifndef REF_COMPARSION
+         cout << "Task node removed: " << _taskHeap[i] << endl;
+         #endif  // REF_COMPARSION
+         _taskHeap.delData(i);
+         break;
+      }
    return _taskHash.remove(n);
 }
 // END: DO NOT CHANGE THIS PART
@@ -83,11 +99,13 @@ void
 TaskMgr::add(size_t nMachines)
 {
    // TODO...
-   while (nMachines--) {
+   while (nMachines > 0) {
       TaskNode newNode;
+      // serious bug!! forget to check for duplication
+      if (!_taskHash.insert(newNode)) continue;
       _taskHeap.insert(newNode);
-      _taskHash.insert(newNode);
       cout << "Task node inserted: " << newNode << endl;
+      nMachines--;
    }
 }
 
