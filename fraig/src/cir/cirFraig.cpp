@@ -19,8 +19,6 @@ using namespace std;
 // TODO: Please keep "CirMgr::strash()" and "CirMgr::fraig()" for cir cmd.
 //       Feel free to define your own variables or functions
 
-#define VERBOSE
-
 /*******************************/
 /*   Global variable and enum  */
 /*******************************/
@@ -56,29 +54,40 @@ CirMgr::strash()
    for (size_t i = 0; i < dfsSize; i++) {
       if (!_dfsList[i]->isAig()) continue;
       CirStrashKey k(_dfsList[i]);
-      CirGate* prev = 0;
+      CirGate* t = 0;
 
-      if (hashStrash.check(k, prev)) {
+      if (hashStrash.check(k, t)) {
          #ifdef VERBOSE
-         cout << "strashing " << _dfsList[i]->getID() << " [";
+         cout << "hash hit " << _dfsList[i]->getID() << " [";
          printFaninPair(_dfsList[i]);
-         cout << "] (" << k() << ") == ";
-         // match inversely
-         size_t which = (_dfsList[i]->getFanin(0) == prev->getFanin(0) ? 0 : 1);
-         if (_dfsList[i]->getInv(0) != prev->getInv(which))
-            cout << "!";
-         cout << prev->getID() << " [";
-         printFaninPair(prev);
+         cout << "] (" << k() << ") == " << t->getID() << " [";
+         printFaninPair(t);
          cout << "]" << endl;
          foundCount++;
          #endif  // VERBOSE
 
-         // TODO: merge
-      } else {
-         hashStrash.insert(k, _dfsList[i]);
+         _dfsList_clean = false;
 
+         // remove old gate from fanin's fanout
+         t->getFanin(0)->eraseFanout(_dfsList[i]);
+         t->getFanin(1)->eraseFanout(_dfsList[i]);
+
+         // merge
+         for (size_t j = 0, n = _dfsList[i]->_fanoutList.size(); j < n; j++) {
+            _dfsList[i]->getFanout(j)->replaceFanin(_dfsList[i], (size_t)t | _dfsList[i]->getFanoutInv(j));
+            t->addFanout(_dfsList[i]->_fanoutList[j]);
+         }
+
+         cout << "Strashing: " << t->getID() << " merging " << _dfsList[i]->getID() << "..." << endl;
+         eraseGate(_dfsList[i]);
+      } else {
+         hashStrash.forceInsert(k, _dfsList[i]);
       }
    }
+
+   #ifdef CHECK_INTEGRITY
+   checkIntegrity();
+   #endif  // CHECK_INTEGRITY
 
    #ifdef VERBOSE
    #include<iomanip>

@@ -651,17 +651,21 @@ CirMgr::printNetlist() const
    cout << endl;
 
    GateList& _dfsList = getDfsList();
+   unsigned cnt = 0;
 
    for (unsigned i = 0, n = _dfsList.size(); i < n; ++i) {
       if (!_dfsList[i]) continue;
       if (_dfsList[i]->_type == UNDEF_GATE) continue;
-      cout << "[" << i << "] "
+
+      cout << "[" << cnt << "] "
            << setw(4) << left << _dfsList[i]->getTypeStr();
 
       _dfsList[i]->printGate();
       if (!_dfsList[i]->_name.empty())
          cout << " (" << _dfsList[i]->_name << ")";
       cout << endl;
+
+      cnt++;
    }
 }
 

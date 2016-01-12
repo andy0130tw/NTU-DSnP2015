@@ -41,6 +41,13 @@ public:
       return it->second;
    }
 
+   void eraseGate(CirGate* g) {
+      assert(g->_type == AIG_GATE || g->_type == UNDEF_GATE);
+      _gates.erase(g->getID());
+      delete g;
+      _andGateCount--;
+   }
+
    // DFS!!!
    GateList& getDfsList() const;
    void dfs(GateList* l = 0) const;

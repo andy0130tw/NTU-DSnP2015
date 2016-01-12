@@ -138,10 +138,7 @@ CirMgr::optimize()
          //      << " with inv=" << new_inv << endl;
       }
 
-      _gates.erase(_dfsList[i]->getID());
-      delete _dfsList[i];
-      _andGateCount--;
-
+      eraseGate(_dfsList[i]);
    }
 
    #ifdef CHECK_INTEGRITY
@@ -167,19 +164,25 @@ bool CirMgr::checkIntegrity() const {
       CirGate* g = (*it).second;
       CirGate* tmp;
 
-      cerr << "checking " << g->getTypeStr() << " " << g->getID() << endl;
+      bool flt = true;
+
+      cerr << "checking \033[01m" << g->getTypeStr() << " " << g->getID() << "\033[0m... ";
+      if (g->_type == UNDEF_GATE) {
+         cerr << "\033[1;33mskipping...\033[1;0m" << endl;
+         continue;
+      }
+
       // fanin
       for (size_t i = 0; i < g->_faninCount; i++) {
          tmp = g->getFanin(i);
-         cerr << "  fanin  #" << i;
          if (!tmp) {
-            cerr << ": \033[1;31mnull ptr!!\033[1;0m" << endl;
+            cerr << ": \033[1;31mNULL!!\033[1;0m  ";
             ok = false;
             continue;
          }
-         cerr << "(" << (g->getInv(i) ? "!" : "") << tmp->getID() << "): ";
+         cerr << "\033[01m\033[34m" << (g->getInv(i) ? "!" : "") << tmp->getID() << "\033[1;0m: ";
          if (!getGate(tmp->getID())) {
-            cerr << "\033[1;31mdoes not exist!!\033[1;0m" << endl;
+            cerr << "\033[1;31mDNE!!\033[1;0m  ";
             ok = false;
             continue;
          }
@@ -190,25 +193,41 @@ bool CirMgr::checkIntegrity() const {
                break;
             }
          }
-         if (found) cerr << "ok";
-         else {
-            cerr << "\033[1;31mno corresponding fanout!!\033[1;0m";
+         if (found) {
+            cerr << "ok";
+            flt = false;
+         } else {
+            cerr << "\033[1;31mNOFOUT!!\033[1;0m";
             ok = false;
          }
-         cerr << endl;
+         cerr << "  ";
       }
+      // fanin count
+      unsigned expectFaninCount = 0;
+      switch (g->_type) {
+         case PO_GATE:  expectFaninCount = 1; break;
+         case AIG_GATE: expectFaninCount = 2; break;
+         default: break;
+      }
+      if (g->_faninCount != expectFaninCount) {
+         cerr << " -- \033[1;31mhaving "
+              << g->_faninCount << " fanin, "
+              << expectFaninCount << "expected\033[1;0m";
+         ok = false;
+      }
+      cerr << endl;
       // fanout
       for (size_t i = 0; i < g->_fanoutList.size(); i++) {
          tmp = g->getFanout(i);
          cerr << "  fanout #" << i;
          if (!tmp) {
-            cerr << ": \033[1;31m: null ptr!!\033[1;0m" << endl;
+            cerr << ": \033[1;31m: NULL!!\033[1;0m" << endl;
             ok = false;
             continue;
          }
-         cerr << "(" << (g->getFanoutInv(i) ? "!" : "") << tmp->getID() << "): ";
+         cerr << "(\033[01m\033[34m" << (g->getFanoutInv(i) ? "!" : "") << tmp->getID() << "\033[1;0m): ";
          if (!getGate(tmp->getID())) {
-            cerr << "\033[1;31mdoes not exist!!\033[1;0m" << endl;
+            cerr << "\033[1;31mDNE!!\033[1;0m" << endl;
             ok = false;
             continue;
          }
@@ -219,12 +238,18 @@ bool CirMgr::checkIntegrity() const {
                break;
             }
          }
-         if (found) cerr << "ok";
-         else {
-            cerr << "\033[1;31mno corresponding fanin!!\033[1;0m";
+         if (found) {
+            cerr << "ok";
+            flt = false;
+         } else {
+            cerr << "\033[1;31mNOFIN!!\033[1;0m";
             ok = false;
          }
          cerr << endl;
+      }
+      if (flt && !ok) {
+         cerr << "\033[1;93mnot ok, but recognized as floating...\033[1;0m" << endl;
+         ok = true;
       }
    }
    if (ok)

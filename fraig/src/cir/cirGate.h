@@ -222,22 +222,25 @@ private:
 class CirStrashKey {
 public:
    CirStrashKey(CirGate* g) {
-      // dicision: hash pointer (more random?) or hash id?
+      // decision: hash pointer (more random?) or hash id?
       // _in0 = g->_fanin[0] >> 1;
-      _v0 = g->getFanin(0)->getID();
-      // _v1 = g->_fanin[1] >> 1;
-      _v1 = g->getFanin(1)->getID();
+      // _in1 = g->_fanin[1] >> 1;
+      bool i0 = g->getInv(0);
+      bool i1 = g->getInv(1);
+      _v0 = g->getFanin(0)->getID() << 1 | i0;
+      _v1 = g->getFanin(1)->getID() << 1 | i1;
       if (_v0 > _v1) swap(_v0, _v1);
 
-      // |    fin0    |    fin1    |  inv  |
-      // |<--- 15 --->|<--- 16 --->|<- 1 ->|
+      // note that inv is defined as "_v0's" inversion state (huh?
+      // |    fin0    |    fin1    |
+      // |<--- 16 --->|<--- 16 --->|
       // use + to cause _v1 to overflow, prevent collision even more
-      _hash = ((_v0 << 17) + (_v1 << 1)) | (g->getInv(0) ^ g->getInv(1));
+      _hash = ((_v0 << 16) + _v1);
    };
    ~CirStrashKey() {};
    size_t operator() () const { return _hash; }
    bool operator == (const CirStrashKey& k) const {
-      return _v0 == k._v0 && _v1 == k._v1 && (_hash & 1) == (k._hash & 1);
+      return _v0 == k._v0 && _v1 == k._v1;
    }
 private:
    size_t _v0, _v1, _hash;
