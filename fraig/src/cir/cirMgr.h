@@ -103,8 +103,11 @@ private:
    // mutable GateList   _unusedList;
    mutable bool       _dfsList_clean;
 
+   // cirSim
+
+
    #ifdef CHECK_INTEGRITY
-   bool checkIntegrity() const;
+   bool checkIntegrity(bool verbose = false) const;
    #endif  // CHECK_INTEGRITY
 };
 

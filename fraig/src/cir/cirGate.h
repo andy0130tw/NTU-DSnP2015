@@ -231,7 +231,6 @@ public:
       _v1 = g->getFanin(1)->getID() << 1 | i1;
       if (_v0 > _v1) swap(_v0, _v1);
 
-      // note that inv is defined as "_v0's" inversion state (huh?
       // |    fin0    |    fin1    |
       // |<--- 16 --->|<--- 16 --->|
       // use + to cause _v1 to overflow, prevent collision even more
@@ -239,9 +238,7 @@ public:
    };
    ~CirStrashKey() {};
    size_t operator() () const { return _hash; }
-   bool operator == (const CirStrashKey& k) const {
-      return _v0 == k._v0 && _v1 == k._v1;
-   }
+   bool operator == (const CirStrashKey& k) const { return _v0 == k._v0 && _v1 == k._v1; }
 private:
    size_t _v0, _v1, _hash;
    // CirGate* _in0, _in1;

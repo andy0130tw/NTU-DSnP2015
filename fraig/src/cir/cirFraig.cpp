@@ -45,7 +45,7 @@ CirMgr::strash()
 
    size_t dfsSize = _dfsList.size();
 
-   HashMap<CirStrashKey, CirGate*> hashStrash(dfsSize * 5 / 3);
+   HashMap<CirStrashKey, CirGate*> hashStrash(getHashSize(dfsSize * 5 / 3));
 
    #ifdef VERBOSE
    unsigned foundCount = 0;
@@ -57,14 +57,6 @@ CirMgr::strash()
       CirGate* t = 0;
 
       if (hashStrash.check(k, t)) {
-         #ifdef VERBOSE
-         cout << "hash hit " << _dfsList[i]->getID() << " [";
-         printFaninPair(_dfsList[i]);
-         cout << "] (" << k() << ") == " << t->getID() << " [";
-         printFaninPair(t);
-         cout << "]" << endl;
-         foundCount++;
-         #endif  // VERBOSE
 
          _dfsList_clean = false;
 
@@ -78,7 +70,17 @@ CirMgr::strash()
             t->addFanout(_dfsList[i]->_fanoutList[j]);
          }
 
-         cout << "Strashing: " << t->getID() << " merging " << _dfsList[i]->getID() << "..." << endl;
+         cout << "Strashing: " << t->getID() << " merging " << _dfsList[i]->getID() << "...";
+         #ifdef VERBOSE
+         cout << " hash " << _dfsList[i]->getID() << " [";
+         printFaninPair(_dfsList[i]);
+         cout << "] (" << k() << ") == " << t->getID() << " [";
+         printFaninPair(t);
+         cout << "]";
+         foundCount++;
+         #endif  // VERBOSE
+         cout << endl;
+
          eraseGate(_dfsList[i]);
       } else {
          hashStrash.forceInsert(k, _dfsList[i]);
@@ -91,10 +93,10 @@ CirMgr::strash()
 
    #ifdef VERBOSE
    #include<iomanip>
-   cout << right;
-   cout << "  hash coll count = " << setw(6) << hashStrash.getCollCount() << endl;
-   cout << "- hash hit  count = " << setw(6) << foundCount << endl;
-   cout << "= hash miss count = " << setw(6) << (hashStrash.getCollCount() - foundCount) << endl;
+   cout << endl << right
+        << "hash coll count = " << setw(6) << hashStrash.getCollCount() << endl
+        << "hash hit  count = " << setw(6) << foundCount << endl
+        << "hash miss count = " << setw(6) << (hashStrash.getCollCount() - foundCount) << endl;
    #endif  // VERBOSE
 }
 

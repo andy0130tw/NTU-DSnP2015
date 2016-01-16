@@ -104,7 +104,7 @@ CirMgr::optimize()
          noop = false;
          gnew = gb;
          inew = ib;
-      } else noop = true;
+      }
 
       if (noop) continue;
 
@@ -154,54 +154,90 @@ CirMgr::optimize()
 /***************************************************/
 
 #ifdef CHECK_INTEGRITY
+enum IntegrityState {
+   INTEGRITY_OK,
+   INTEGRITY_NULLPTR,
+   INTEGRITY_NOT_FOUND,
+   INTEGRITY_WRONG_INV,
+   INTEGRITY_BROKEN
+};
+
+static IntegrityState checkFaninIntegrity(const CirMgr* mgr, const CirGate* g, unsigned i) {
+   CirGate* tmp = g->getFanin(i);
+   if (!tmp) return INTEGRITY_NULLPTR;
+   if (!mgr->getGate(tmp->getID())) return INTEGRITY_NOT_FOUND;
+   bool found = false, found_inv = false;
+   // also match the inverted one to help investigating
+   for (size_t j = 0; j < tmp->_fanoutList.size(); j++) {
+      if (tmp->getFanout(j) == g) {
+         if (tmp->getFanoutInv(j) == g->getInv(i)) found = true;
+         else found_inv = true;
+         if (found) break;
+      }
+   }
+   if (found) return INTEGRITY_OK;
+   return found_inv ? INTEGRITY_WRONG_INV : INTEGRITY_BROKEN;
+}
+
+static IntegrityState checkFanoutIntegrity(const CirMgr* mgr, const CirGate* g, unsigned i) {
+   CirGate* tmp = g->getFanout(i);
+   if (!tmp) return INTEGRITY_NULLPTR;
+   if (!mgr->getGate(tmp->getID())) return INTEGRITY_NOT_FOUND;
+   bool found = false, found_inv = false;
+   for (size_t j = 0; j < tmp->_faninCount; j++) {
+      if (tmp->getFanin(j) == g) {
+         if (tmp->getInv(j) == g->getFanoutInv(i)) found = true;
+         else found_inv = true;
+         if (found) break;
+      }
+   }
+   if (found) return INTEGRITY_OK;
+   return found_inv ? INTEGRITY_WRONG_INV : INTEGRITY_BROKEN;
+}
+
 // iterate over all gates and check for connection and invertion states
-bool CirMgr::checkIntegrity() const {
+bool CirMgr::checkIntegrity(bool verbose) const {
    cerr << endl;
    cerr << "------ Integrity check start ------" << endl;
    bool ok = true;
 
    for (GateMap::const_iterator it = _gates.begin(); it != _gates.end(); ++it) {
       CirGate* g = (*it).second;
-      CirGate* tmp;
 
-      bool flt = true;
+      bool gate_fail = false, gate_fail_all = true;
 
       cerr << "checking \033[01m" << g->getTypeStr() << " " << g->getID() << "\033[0m... ";
-      if (g->_type == UNDEF_GATE) {
-         cerr << "\033[1;33mskipping...\033[1;0m" << endl;
-         continue;
-      }
 
       // fanin
       for (size_t i = 0; i < g->_faninCount; i++) {
-         tmp = g->getFanin(i);
-         if (!tmp) {
-            cerr << ": \033[1;31mNULL!!\033[1;0m  ";
+         if (i) cerr << " / ";
+         IntegrityState result = checkFaninIntegrity(this, g, i);
+         if (result != INTEGRITY_OK)
             ok = false;
-            continue;
-         }
-         cerr << "\033[01m\033[34m" << (g->getInv(i) ? "!" : "") << tmp->getID() << "\033[1;0m: ";
-         if (!getGate(tmp->getID())) {
-            cerr << "\033[1;31mDNE!!\033[1;0m  ";
-            ok = false;
-            continue;
-         }
-         bool found = false;
-         for (size_t j = 0; j < tmp->_fanoutList.size(); j++) {
-            if (tmp->getFanout(j) == g && tmp->getFanoutInv(j) == g->getInv(i)) {
-               found = true;
-               break;
+
+         if (result == INTEGRITY_NULLPTR)
+            cerr << ": \033[1;31mNULL!!";
+         else {
+            cerr << "\033[01m\033[34m"
+                 << (g->getInv(i) ? "!" : "")
+                 << g->getFanin(i)->getID() << "\033[1;0m: ";
+            if (result == INTEGRITY_OK) {
+               cerr << "ok";
+               gate_fail_all = false;
+            } else {
+               gate_fail = true;
+               cerr << "\033[1;31m";
+               if (result == INTEGRITY_NOT_FOUND)
+                  cerr << "DNE!!";
+               else if (result == INTEGRITY_BROKEN)
+                  cerr << "NOFOUT!!";
+               else if (result == INTEGRITY_WRONG_INV)
+                  cerr << "WINV!!";
             }
          }
-         if (found) {
-            cerr << "ok";
-            flt = false;
-         } else {
-            cerr << "\033[1;31mNOFOUT!!\033[1;0m";
-            ok = false;
-         }
-         cerr << "  ";
+         cerr << "\033[1;0m";
       }
+
       // fanin count
       unsigned expectFaninCount = 0;
       switch (g->_type) {
@@ -216,40 +252,44 @@ bool CirMgr::checkIntegrity() const {
          ok = false;
       }
       cerr << endl;
+
       // fanout
       for (size_t i = 0; i < g->_fanoutList.size(); i++) {
-         tmp = g->getFanout(i);
-         cerr << "  fanout #" << i;
-         if (!tmp) {
-            cerr << ": \033[1;31m: NULL!!\033[1;0m" << endl;
+         IntegrityState result = checkFanoutIntegrity(this, g, i);
+         if (result != INTEGRITY_OK)
             ok = false;
-            continue;
-         }
-         cerr << "(\033[01m\033[34m" << (g->getFanoutInv(i) ? "!" : "") << tmp->getID() << "\033[1;0m): ";
-         if (!getGate(tmp->getID())) {
-            cerr << "\033[1;31mDNE!!\033[1;0m" << endl;
-            ok = false;
-            continue;
-         }
-         bool found = false;
-         for (size_t j = 0; j < tmp->_faninCount; j++) {
-            if (tmp->getFanin(j) == g && tmp->getInv(j) == g->getFanoutInv(i)) {
-               found = true;
-               break;
+
+         if (i && i % 4 == 0) cerr << endl;
+         cerr << "    ";
+
+         cerr << "#" << setw(2) << i;
+         if (result == INTEGRITY_NULLPTR)
+            cerr << ": \033[1;31mNULL!!";
+         else {
+            cerr << "(\033[01m\033[36m"
+                 << (g->getFanoutInv(i) ? "!" : "")
+                 << g->getFanout(i)->getID() << "\033[1;0m): ";
+            if (result == INTEGRITY_OK) {
+               cerr << "ok";
+               gate_fail_all = false;
+            } else {
+               gate_fail = true;
+               cerr << "\033[1;31m";
+               if (result == INTEGRITY_NOT_FOUND)
+                  cerr << "DNE!!";
+               else if (result == INTEGRITY_BROKEN)
+                  cerr << "NOFIN!!";
+               else if (result == INTEGRITY_WRONG_INV)
+                  cerr << "WINV!!";
             }
          }
-         if (found) {
-            cerr << "ok";
-            flt = false;
-         } else {
-            cerr << "\033[1;31mNOFIN!!\033[1;0m";
-            ok = false;
-         }
-         cerr << endl;
+         cerr << "\033[1;0m";
       }
-      if (flt && !ok) {
+      if (!g->_fanoutList.empty()) cerr << endl;
+
+      // floating check; it can be directly removed so just give it a warning
+      if (g->_type == AIG_GATE && gate_fail && gate_fail_all) {
          cerr << "\033[1;93mnot ok, but recognized as floating...\033[1;0m" << endl;
-         ok = true;
       }
    }
    if (ok)

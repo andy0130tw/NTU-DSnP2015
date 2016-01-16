@@ -606,13 +606,13 @@ CirMgr::readCircuit(const string& fileName)
       }
 
       // ========== COMMENT ========= (no need to record this)
+
       state = STATE_FINISHED;
+      initialize();
    } catch (CirParseError err) {
       ok = false;
       parseError(err);
    }
-
-   initialize();
 
    f.close();
    return ok;
