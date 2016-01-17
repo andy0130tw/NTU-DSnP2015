@@ -27,15 +27,15 @@ using namespace std;
 /**************************************/
 /*   Static varaibles and functions   */
 /**************************************/
-// static inline void fancyIO(bool x) {
-//    cout << (x ? "\033[01m\033[01m1\033[0m" : "\033[90m\033[02m0\033[0m");
-// }
+static inline void fancyIO(bool x) {
+   cout << (x ? "\033[01m\033[01m1\033[0m" : "\033[90m\033[02m0\033[0m");
+}
 
-// static void printSimData(CirSimData& s) {
-//    for (CirSimData i = SIM_HIGHEST_BIT; i > 0; i >>= 1) {
-//       fancyIO(s & i);
-//    }
-// }
+static void printSimData(const CirSimData s) {
+   for (CirSimData i = SIM_HIGHEST_BIT; i > 0; i >>= 1) {
+      fancyIO(s & i);
+   }
+}
 
 /************************************************/
 /*   Public member functions about Simulation   */
@@ -44,11 +44,11 @@ void
 CirMgr::randomSim()
 {
    GateList& l = getDfsList();
-   size_t ni = _piList.size(), no = _poList.size();
-   CirSimData simi[ni], simo[no];
+   size_t piSize = _piList.size();
+   CirSimData simi[piSize];
 
    // assigning input
-   for (size_t i = 0; i < ni; i++) {
+   for (size_t i = 0; i < piSize; i++) {
       simi[i] = ((CirSimData)rnGen(1 << 16) << 16 | rnGen(1 << 16));
       _piList[i]->setSimData(simi[i]);
       // cout << "assign PI  " << setw(3) << _piList[i]->getID() << " = ";

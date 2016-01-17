@@ -43,6 +43,8 @@ public:
 
    GateVList _fanoutList;
 
+   GateList* _fecGroup;
+
    CirGate* getFanin(size_t i) const { return (CirGate*) (_fanin[i] & PTR_MASK); }
    void setFanin(size_t i, CirGate* const g) { _fanin[i] = (CirGateV)g | (_fanin[i] & 1); }
    void setFanin(size_t i, CirGateV const g) { _fanin[i] = g; }
@@ -76,25 +78,9 @@ public:
    virtual bool addFanin(CirGate* gate, bool inv) { return addFanin((CirGateV)gate | inv); }
    virtual bool addFanout(CirGate* gate, bool inv) { return addFanout((CirGateV)gate | inv); }
 
-   void replaceFanin(CirGate* a, CirGateV b) {
-      for (size_t i = 0; i < _faninCount; i++) {
-         if (getFanin(i) == a) {
-            setFanin(i, b);
-         }
-      }
-   }
+   void replaceFanin(CirGate*, CirGateV);
+   bool eraseFanout(CirGate* f);
 
-   bool eraseFanout(CirGate* f) {
-      for (GateVList::iterator it = _fanoutList.begin(); it != _fanoutList.end(); ++it) {
-         if (!(((*it) ^ (CirGateV)f) >> 1)) {
-            _fanoutList.erase(it);
-            return true;
-         }
-      }
-      return false;
-   }
-
-   static void const clearMark() { _global_ref++; }
    void mark() const { _ref = _global_ref; }
    bool isMarked() const { return (_ref == _global_ref); }
 
@@ -113,13 +99,16 @@ public:
    virtual bool isAig() const { return false; }
 
    virtual void simulate() {}
-   CirSimData getSimData(bool inv = false) { return (inv ? ~_sim_data : _sim_data); }
+   CirSimData getSimData(bool inv = false) const { return (inv ? ~_sim_data : _sim_data); }
    void setSimData(CirSimData s) { _sim_data = s; }
 
+   static unsigned const getGlobalRef() { return _global_ref; }
+   static void clearMark() { _global_ref++; }
+
 private:
-   unsigned _id;
+   unsigned         _id;
    mutable unsigned _ref;
-   int _lineno;
+   int              _lineno;
 
    static unsigned _global_ref;
    static CirGateV const PTR_MASK = ~((CirGateV)1);
@@ -225,10 +214,8 @@ public:
       // decision: hash pointer (more random?) or hash id?
       // _in0 = g->_fanin[0] >> 1;
       // _in1 = g->_fanin[1] >> 1;
-      bool i0 = g->getInv(0);
-      bool i1 = g->getInv(1);
-      _v0 = g->getFanin(0)->getID() << 1 | i0;
-      _v1 = g->getFanin(1)->getID() << 1 | i1;
+      _v0 = g->getFanin(0)->getID() << 1 | g->getInv(0);
+      _v1 = g->getFanin(1)->getID() << 1 | g->getInv(1);
       if (_v0 > _v1) swap(_v0, _v1);
 
       // |    fin0    |    fin1    |
@@ -236,12 +223,34 @@ public:
       // use + to cause _v1 to overflow, prevent collision even more
       _hash = ((_v0 << 16) + _v1);
    };
-   ~CirStrashKey() {};
+   ~CirStrashKey() {}
    size_t operator() () const { return _hash; }
    bool operator == (const CirStrashKey& k) const { return _v0 == k._v0 && _v1 == k._v1; }
 private:
    size_t _v0, _v1, _hash;
    // CirGate* _in0, _in1;
+};
+
+class CirPatternKey {
+public:
+   CirPatternKey(CirSimData p, unsigned r = 0) {
+      // to match inverted pattern, hash values are flipped if the last bit is 1
+      // that way, the last bit is always 0, and store whether it is flipped there
+      // for example: 00001 -> 11111 (flipped)
+      //              11110 -> 11110 (stored as-is)
+      _pattern = (p & 1) ? (~p | 1) : p;
+      // to reuse hash map across multiple simulations
+      _rev = r;
+   }
+   ~CirPatternKey() {}
+   size_t operator() () const {
+      // when comparing keys, ignore the last bit.
+      return _pattern >> 1; //return (_pattern & 1) ? (~_pattern | 1) : _pattern;
+   }
+   bool operator == (const CirPatternKey& p) { return _rev == p._rev && _pattern >> 1 == p._pattern >> 1; }
+private:
+   CirSimData _pattern;
+   unsigned   _rev;
 };
 
 #endif // CIR_GATE_H

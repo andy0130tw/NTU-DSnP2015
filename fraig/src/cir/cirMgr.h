@@ -26,7 +26,7 @@ extern CirMgr *cirMgr;
 class CirMgr
 {
 public:
-   CirMgr(): _dfsList_clean(false) {}
+   CirMgr(): _dfsList_clean(false), _fecGroupList(0), _fecHashMap(0) {}
    ~CirMgr() {
       for (GateMap::const_iterator it = _gates.begin(); it != _gates.end(); ++it) {
          delete it->second;
@@ -96,15 +96,20 @@ private:
    ofstream           *_simLog;
    GateList           _piList;
    GateList           _poList;
-   GateList           _totalList;
+   // GateList           _totalList;
 
    GateMap            _gates;
    mutable GateList   _dfsList;
    // mutable GateList   _unusedList;
    mutable bool       _dfsList_clean;
 
-   // cirSim
+   FECGroupList*      _fecGroupList;
+   HashMap<CirPatternKey, GateList*>* _fecHashMap;
 
+   // for simulation
+   void initFECGroup();
+   void simulateOnFECs();
+   void outputSimResult(CirSimData[], unsigned = 0);
 
    #ifdef CHECK_INTEGRITY
    bool checkIntegrity(bool verbose = false) const;

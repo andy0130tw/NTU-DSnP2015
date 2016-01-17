@@ -28,6 +28,24 @@ unsigned CirGate::_global_ref = 0;
 /**************************************/
 /*   class CirGate member functions   */
 /**************************************/
+void CirGate::replaceFanin(CirGate* a, CirGateV b) {
+   for (size_t i = 0; i < _faninCount; i++) {
+      if (getFanin(i) == a) {
+         setFanin(i, b);
+      }
+   }
+}
+
+bool CirGate::eraseFanout(CirGate* f) {
+   for (GateVList::iterator it = _fanoutList.begin(); it != _fanoutList.end(); ++it) {
+      if (!(((*it) ^ (CirGateV)f) >> 1)) {
+         _fanoutList.erase(it);
+         return true;
+      }
+   }
+   return false;
+}
+
 void CirGate::traversal(GateList* l = 0) const {
    mark();
    CirGate* fin;
@@ -57,7 +75,17 @@ CirGate::reportGate() const
    cout << "= " << setw(46) << left << ss.str() << " =" << endl;
 
    ss.str("");
-   ss << "FECs: " << "[Not Implemented...]";
+   ss << "FECs: ";
+   if (_fecGroup) {
+      CirSimData ref = getSimData();
+      for (size_t i = 0; i < _fecGroup->size(); i++) {
+         CirGate* g = _fecGroup->at(i);
+         if (g == this) continue;
+         if (g->getSimData() != ref)
+            ss << "!";
+         ss << g->getID() << " ";
+      }
+   }
    cout << "= " << setw(46) << left << ss.str() << " =" << endl;
 
    ss.str("");
