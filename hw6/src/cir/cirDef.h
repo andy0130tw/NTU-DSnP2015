@@ -17,7 +17,6 @@ class CirGate;
 class CirMgr;
 
 typedef vector<CirGate*>           GateList;
-typedef vector<unsigned>           IdList;
 
 enum GateType
 {

@@ -32,7 +32,7 @@ class CirGate
 
 public:
    CirGate(GateType t = UNDEF_GATE, unsigned gid = 0, int ln = 0):
-      _type(t), _faninCount(0), _id(gid), _ref(_global_ref), _lineno(ln) {}
+      _type(t), _faninCount(0), _fecGroup(0), _id(gid), _ref(_global_ref), _lineno(ln), _sim_data(0) {}
    virtual ~CirGate() {}
 
    GateType _type;
@@ -245,7 +245,7 @@ public:
    ~CirPatternKey() {}
    size_t operator() () const {
       // when comparing keys, ignore the last bit.
-      return _pattern >> 1; //return (_pattern & 1) ? (~_pattern | 1) : _pattern;
+      return (_pattern >> 1) + ((_rev * 3) << 10); //return (_pattern & 1) ? (~_pattern | 1) : _pattern;
    }
    bool operator == (const CirPatternKey& p) { return _rev == p._rev && _pattern >> 1 == p._pattern >> 1; }
 private:

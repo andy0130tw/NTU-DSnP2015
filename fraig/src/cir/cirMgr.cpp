@@ -730,14 +730,16 @@ CirMgr::printFloatGates() const
 void
 CirMgr::printFECPairs() const
 {
+   if (!_fecGroupList) return;
    for (size_t i = 0, n = _fecGroupList->size(); i < n; i++) {
-      cout << "[" << i << "] ";
+      cout << "[" << i << "]";
       GateList& gl = *_fecGroupList->at(i);
       CirSimData val = gl[0]->getSimData();
       for (size_t j = 0, m = gl.size(); j < m; j++) {
+         cout << " ";
          if (gl[j]->getSimData() != val)
             cout << "!";
-         cout << gl[j]->getID() << " ";
+         cout << gl[j]->getID();
       }
       cout << endl;
    }

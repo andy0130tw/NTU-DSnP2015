@@ -206,7 +206,7 @@ bool CirMgr::checkIntegrity(bool verbose) const {
 
       bool gate_fail = false, gate_fail_all = true;
 
-      cerr << "checking \033[01m" << g->getTypeStr() << " " << g->getID() << "\033[0m... ";
+      cerr << "checking \033[1;01m" << g->getTypeStr() << " " << g->getID() << "\033[1;0m... ";
 
       // fanin
       for (size_t i = 0; i < g->_faninCount; i++) {
@@ -218,7 +218,7 @@ bool CirMgr::checkIntegrity(bool verbose) const {
          if (result == INTEGRITY_NULLPTR)
             cerr << ": \033[1;31mNULL!!";
          else {
-            cerr << "\033[01m\033[34m"
+            cerr << "\033[1;34m"
                  << (g->getInv(i) ? "!" : "")
                  << g->getFanin(i)->getID() << "\033[1;0m: ";
             if (result == INTEGRITY_OK) {
@@ -266,7 +266,7 @@ bool CirMgr::checkIntegrity(bool verbose) const {
          if (result == INTEGRITY_NULLPTR)
             cerr << ": \033[1;31mNULL!!";
          else {
-            cerr << "(\033[01m\033[36m"
+            cerr << "(\033[1;36m"
                  << (g->getFanoutInv(i) ? "!" : "")
                  << g->getFanout(i)->getID() << "\033[1;0m): ";
             if (result == INTEGRITY_OK) {
