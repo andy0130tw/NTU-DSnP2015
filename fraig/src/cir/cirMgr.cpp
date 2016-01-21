@@ -749,9 +749,9 @@ void
 CirMgr::writeAag(ostream& outfile) const
 {
    // preprocessing
-   GateList l, piGen, poGen;
+   GateList& l = getDfsList();
+   GateList piGen, poGen;
    unsigned newA = 0;
-   dfs(&l);
 
    for (GateMap::const_iterator it = _gates.begin(); it != _gates.end(); ++it)
       switch (it->second->_type) {

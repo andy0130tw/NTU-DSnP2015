@@ -69,7 +69,7 @@ CirMgr::optimize()
    // Output Example:
    // Simplifying: XX merging (!)YY...
 
-   bool noop, structChanged = false;
+   bool structChanged = false;
 
    CirGate *ga, *gb;
    CirGate* gnew;
@@ -81,7 +81,6 @@ CirMgr::optimize()
    for (size_t i = 0, n = _dfsList.size(); i < n; i++) {
       if (!_dfsList[i]->isAig()) continue;
 
-      noop = true;
       ga = _dfsList[i]->getFanin(0);
       gb = _dfsList[i]->getFanin(1);
       ia = _dfsList[i]->getInv(0);
@@ -96,17 +95,11 @@ CirMgr::optimize()
 
       if ((ga->_type == CONST_GATE && !ia) || (ga == gb && ia != ib)) {
          // (0 AND X = 0) or (X AND ~X = 0)
-         noop = false;
-         gnew = getGate(0);
-         inew = false;
+         gnew = getGate(0); inew = false;
       } else if ((ga->_type == CONST_GATE && ia) || (ga == gb && ia == ib)) {
          // (1 AND X = X) or (X AND X = X)
-         noop = false;
-         gnew = gb;
-         inew = ib;
-      }
-
-      if (noop) continue;
+         gnew = gb;         inew = ib;
+      } else continue;
 
       structChanged = true;
 

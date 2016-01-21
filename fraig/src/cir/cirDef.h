@@ -31,7 +31,8 @@ typedef unsigned                   CirSimData;
 
 typedef vector<GateList*>          FECGroupList;
 
-const CirSimData SIM_HIGHEST_BIT = (CirSimData)1 << ((sizeof(CirSimData) << 3) - 1);
+const unsigned SIM_BITS          = sizeof(CirSimData) << 3;
+const CirSimData SIM_HIGHEST_BIT = (CirSimData)1 << (SIM_BITS - 1);
 
 enum GateType
 {

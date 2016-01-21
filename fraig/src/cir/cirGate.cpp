@@ -76,6 +76,7 @@ CirGate::reportGate() const
 
    ss.str("");
    ss << "FECs: ";
+   // FIXME: check if fecGroup is deleted
    if (_fecGroup) {
       CirSimData ref = getSimData();
       for (size_t i = 0; i < _fecGroup->size(); i++) {

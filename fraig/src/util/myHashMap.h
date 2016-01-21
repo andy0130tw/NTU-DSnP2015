@@ -15,7 +15,7 @@ using namespace std;
 
 // TODO: Implement your own HashMap and Cache classes.
 
-#define HASHMAP_DEBUG
+// #define HASHMAP_DEBUG
 
 #ifdef HASHMAP_DEBUG
 #define ADD_COLL_COUNT (_coll_count++)

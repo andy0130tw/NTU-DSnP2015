@@ -26,11 +26,14 @@ extern CirMgr *cirMgr;
 class CirMgr
 {
 public:
-   CirMgr(): _dfsList_clean(false), _fecGroupList(0) {}
+   CirMgr(): _dfsList_clean(false), _fecGroupList(0), _satSolver(0) {}
    ~CirMgr() {
       for (GateMap::const_iterator it = _gates.begin(); it != _gates.end(); ++it) {
          delete it->second;
       }
+
+      if (_fecGroupList) delete _fecGroupList;
+      if (_satSolver)    delete _satSolver;
    }
 
    // Access functions
@@ -46,6 +49,7 @@ public:
       _gates.erase(g->getID());
       delete g;
       _andGateCount--;
+      _dfsList_clean = false;
    }
 
    // DFS!!!
@@ -104,12 +108,17 @@ private:
    mutable bool       _dfsList_clean;
 
    FECGroupList*      _fecGroupList;
+   SatSolver*         _satSolver;
 
    // for simulation
    void simulateCircuit();
    void initFECGroup();
    void manipulateFECs();
    void outputSimResult(CirSimData[], unsigned = 0);
+
+   // for fraig
+   void genProofModel(SatSolver&);
+   void mergeGate(CirGate*, CirGate*);
 
    #ifdef CHECK_INTEGRITY
    bool checkIntegrity(bool verbose = false) const;

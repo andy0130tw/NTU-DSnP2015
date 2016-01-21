@@ -44,6 +44,8 @@ public:
    GateVList _fanoutList;
 
    GateList* _fecGroup;
+   size_t dfsListIdx;
+   Var _satVar;
 
    CirGate* getFanin(size_t i) const { return (CirGate*) (_fanin[i] & PTR_MASK); }
    void setFanin(size_t i, CirGate* const g) { _fanin[i] = (CirGateV)g | (_fanin[i] & 1); }

@@ -31,6 +31,7 @@ using namespace std;
 // we often need the size ... and nothing else -w-
 static size_t _tmpDfsListSize = 0;
 
+
 static inline void fancyIO(bool x) {
    cout << (x ? "\033[01m\033[01m1\033[0m" : "\033[90m\033[02m0\033[0m");
 }
@@ -49,6 +50,16 @@ static void clearCurrentFECPtr(GateList* ls) {
       if (g->_fecGroup == ls)
          g->_fecGroup = 0;
    }
+}
+static CirSimData randomSimData() {
+   // rnGen can only produce 31 bits random number
+   // so we try to fill it by generating 16 bits repeatly
+   CirSimData ret(0), b = SIM_HIGHEST_BIT >> 15;
+   while (b) {
+      ret |= ((CirSimData)rnGen(1 << 16)) * b;
+      b >>= 16;
+   }
+   return ret;
 }
 
 // check if their simulation is all the same
@@ -89,7 +100,7 @@ CirMgr::randomSim()
    unsigned simulatedCount = 0;
    unsigned previousFEC = 0;
    unsigned failedCount = 0;
-   unsigned const maxFail = (unsigned)(3 + log(_tmpDfsListSize) * 12);
+   unsigned const maxFail = (unsigned)(3 + log(_tmpDfsListSize) * 20);
 
    cout << "MAX_FAILS = " << maxFail << endl;
 
@@ -97,8 +108,7 @@ CirMgr::randomSim()
 
       // assigning input
       for (size_t i = 0; i < piSize; i++) {
-         // this is hard-coded and not portable...
-         simi[i] = ((CirSimData)rnGen(1 << 16) << 16 | rnGen(1 << 16));
+         simi[i] = randomSimData();
          _piList[i]->setSimData(simi[i]);
       }
 
@@ -106,13 +116,13 @@ CirMgr::randomSim()
       manipulateFECs();
 
       size_t fecCnt = _fecGroupList->size();
-      if (previousFEC >= fecCnt)
+      if (previousFEC == fecCnt)
          failedCount++;
       previousFEC = fecCnt;
 
       // generate log
       outputSimResult(simi);
-      simulatedCount += 32;
+      simulatedCount += SIM_BITS;
 
       cout << "\rTotal #FEC Group: " << fecCnt
            << " | Simulated = " << simulatedCount
@@ -170,22 +180,21 @@ CirMgr::fileSim(ifstream& patternFile)
       }
 
       if (!bit) {
-         for (size_t i = 0; i < piSize; i++) {
-            // cout << "read pattern: ";
-            // printSimData(inputBuf[i]);
+         for (size_t i = 0; i < piSize; i++)
             _piList[i]->setSimData(inputBuf[i]);
-            // cout << endl;
-         }
+
          simulateCircuit();
          manipulateFECs();
-         size_t n = _fecGroupList->size();
-         cout << "\rTotal #FEC Group: " << n
-              << " | simulated = " << simulatedCount << flush;
 
          // `usedBits == 0` means unlimited
          outputSimResult(inputBuf, usedBits);
 
          simulatedCount += readCount;
+
+         size_t n = _fecGroupList->size();
+         cout << "\rTotal #FEC Group: " << n
+              << " | simulated = " << simulatedCount << flush;
+
          readCount = 0;
 
          if (patternFile.fail())
@@ -227,10 +236,18 @@ void CirMgr::initFECGroup() {
    }
 }
 
+// FIXME
+// The verdict of each FEC group can be collected:
+//   1) U - unchanged: the patterns are all the same
+//   2) D - diverge:   some new FEC groups formed
+//   3) S - shrink:    no new FEC groups formed
+//
+// return if this operation is considered as "successful"
+// used to control the effort in random-simulations
 void CirMgr::manipulateFECs() {
    if (!_fecGroupList) initFECGroup();
 
-   HashMap<CirPatternKey, GateList*> patHash(getHashSize(_tmpDfsListSize * 5 / 3));
+   HashMap<CirPatternKey, GateList*> patHash(getHashSize(10 + _tmpDfsListSize / 100));
 
    // pre-process "stuck-at-const" gates; constant gate always have a 0 key
    CirGate* constGate = _gates[0];
@@ -250,7 +267,7 @@ void CirMgr::manipulateFECs() {
       GateList* currList = _fecGroupList->at(i);
       GateList* replacingList = 0;
 
-      if (!isFECGroupChanged(currList)) continue;
+      if (constGate->_fecGroup && !isFECGroupChanged(currList)) continue;
 
       for (size_t j = 0, m = currList->size(); j < m; j++) {
          CirGate* g = currList->at(j);
