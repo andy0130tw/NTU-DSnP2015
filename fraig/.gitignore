@@ -1,0 +1,14 @@
+# generated static library
+/lib/*
+!/lib/libcmd*.a
+
+# some big patterns file; too large to be tracked on GitHub
+/tests.fraig/pattern.12
+/tests.fraig/pattern.13
+
+# temporary dofiles
+/tests.fraig/do.*
+
+# dist files
+/bin/*
+

@@ -1,0 +1,28 @@
+#! /bin/sh
+if [ $# = 0 ]; then
+  echo "Missing aag file. Using -- run.opt xx for (optxx.aag)"; exit 1
+fi
+
+design=opt$1.aag
+if [ ! -f $design ]; then
+   echo "$design does not exists" ; exit 1
+fi
+
+dofile=do.opt
+rm -f $dofile
+echo "cirr $design" > $dofile
+echo "cirp" >> $dofile
+echo "cirp -pi" >> $dofile
+echo "cirp -po" >> $dofile
+echo "cirp -n" >> $dofile
+echo "cirp -fl" >> $dofile
+echo "cirsw" >> $dofile
+echo "ciropt" >> $dofile
+echo "cirstrash" >> $dofile
+echo "cirp" >> $dofile
+echo "cirp -pi" >> $dofile
+echo "cirp -po" >> $dofile
+echo "cirp -n" >> $dofile
+echo "cirp -fl" >> $dofile
+echo "q -f" >> $dofile
+../fraig -f $dofile
