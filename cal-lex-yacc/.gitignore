@@ -1,0 +1,12 @@
+# derived from lex and yacc
+*.cpp
+*.yy.c
+*.hpp
+
+# object files
+*.o
+
+# executables
+/mycal
+/cal-ref/mycal
+
