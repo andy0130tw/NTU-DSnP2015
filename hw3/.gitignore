@@ -1,5 +1,6 @@
 # compiled library
 /lib/*.a
+!/src/cmd/cmdReader-*.o
 
 # dist folder
 /bin
