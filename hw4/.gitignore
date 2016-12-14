@@ -3,4 +3,6 @@
 !/lib/libcmd-*.a
 
 # dist file
-/bin
+/bin/*
+!/bin/.gitkeep
+

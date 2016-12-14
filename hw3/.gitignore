@@ -2,6 +2,7 @@
 /lib/*.a
 !/src/cmd/cmdReader-*.o
 
-# dist folder
+# dist files
 /bin
+!/bin/.gitkeep
 
